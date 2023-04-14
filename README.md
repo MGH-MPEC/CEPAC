@@ -3,7 +3,7 @@
 The **C**ost **E**ffectiveness of **P**reventing **A**IDS **C**omplications (CEPAC) model is a computer-based, state-transition, Monte Carlo simulation model of the progression and outcomes of HIV disease.
 
 ## Project Overview
-<img src="images/FlowChart.png" width="800">
+<img src="images/Flowchart.png" width="800">
 
 ### Requirements
 
