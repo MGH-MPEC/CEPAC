@@ -89,30 +89,33 @@ void TBDiseaseUpdater::performInitialUpdates() {
 /** \brief performMonthlyUpdates perform all of the state and statistics updates for a simulated month
  *
  * Depending on Patient's current true TB disease state, call one of the following
- * 	- TBDiseaseUpdater::performUninfectedTBUpdates()
- *  - TBDiseaseUpdater::performLatentTBUpdates()
- *  - TBDiseaseUpdater::performActivePulmTBUpdates()
- *  - TBDiseaseUpdater::performActiveExtraPulmTBUpdates()
- *  - TBDiseaseUpdater::performTreatDefaultTBUpdates()
- *  - TBDiseaseUpdater::performPrevTreatTBUpdates()
+ * 	- TBDiseaseUpdater::rollForInfection()
+ *  - TBDiseaseUpdater::rollForTBActivation()
+ *  - TBDiseaseUpdater::rollForTBSelfCure()
  **/
 void TBDiseaseUpdater::performMonthlyUpdates() {
 	if (!simContext->getTBInputs()->enableTB)
 		return;
-
-	if (patient->getTBState()->currTrueTBDiseaseState == SimContext::TB_STATE_UNINFECTED)
-		performUninfectedTBUpdates();
-	if (patient->getTBState()->currTrueTBDiseaseState == SimContext::TB_STATE_PREV_TREATED)
-		performPrevTreatTBUpdates();
-	if (patient->getTBState()->currTrueTBDiseaseState == SimContext::TB_STATE_TREAT_DEFAULT)
-		performTreatDefaultTBUpdates();
+	// Roll for infection/reinfection if in the Uninfected, Latent, Previously Treated, or Treatment Default TB state
+	if (patient->getTBState()->currTrueTBDiseaseState != SimContext::TB_STATE_ACTIVE_PULM && patient->getTBState()->currTrueTBDiseaseState != SimContext::TB_STATE_ACTIVE_EXTRAPULM){
+		rollForInfection(patient->getTBState()->currTrueTBDiseaseState);
+	}
+	// Roll for relapse if in the Previously Treated or Treatment Default TB state (i.e., if they started the month in those states and didn't just get reinfected)
+	if (patient->getTBState()->currTrueTBDiseaseState == SimContext::TB_STATE_PREV_TREATED ||
+		patient->getTBState()->currTrueTBDiseaseState == SimContext::TB_STATE_TREAT_DEFAULT){
+		// patients who experienced self-cure have strong immune systems and will not relapse
+		if(!patient->getTBState()->isSelfCured){
+			rollForRelapse(patient->getTBState()->currTrueTBDiseaseState);
+		}
+	}
+	// Roll for activation if in the Latent TB state
 	if (patient->getTBState()->currTrueTBDiseaseState == SimContext::TB_STATE_LATENT)
-		performLatentTBUpdates();
-	if (patient->getTBState()->currTrueTBDiseaseState == SimContext::TB_STATE_ACTIVE_PULM)
-		performActivePulmTBUpdates();
-	if (patient->getTBState()->currTrueTBDiseaseState == SimContext::TB_STATE_ACTIVE_EXTRAPULM)
-		performActiveExtraPulmTBUpdates();
-
+		rollForTBActivation();
+	// Roll for TB self-cure if in one of the Active TB states 
+	if (patient->getTBState()->currTrueTBDiseaseState == SimContext::TB_STATE_ACTIVE_PULM || patient->getTBState()->currTrueTBDiseaseState == SimContext::TB_STATE_ACTIVE_EXTRAPULM){
+		rollForTBSelfCure();
+	}	
+	// Roll for TB symptoms if it is past Momth 0 
 	if(patient->getGeneralState()->monthNum != 0)
 		rollForTBSymptoms();
 	//Add mortality risk for death from active TB, modified by time on successful or failed treatment where applicable
@@ -164,7 +167,7 @@ void TBDiseaseUpdater::performMonthlyUpdates() {
 					deathRateRatioTx = simContext->getTBInputs()->TBDeathRateRatioTreatmentSuccessHIVNeg[2];
 					for (int i = 0; i < 2; i++) {
 						if (timeOnTreatment <= simContext->getTBInputs()->TBDeathRateRatioTxSuccessBounds[i]) {
-							deathRateRatioTx = simContext->getTBInputs()->TBDeathRateRatioTreatmentSuccessHIVNeg[i];;
+							deathRateRatioTx = simContext->getTBInputs()->TBDeathRateRatioTreatmentSuccessHIVNeg[i];
 							break;
 						}	
 					}
@@ -173,7 +176,7 @@ void TBDiseaseUpdater::performMonthlyUpdates() {
 					deathRateRatioTx = simContext->getTBInputs()->TBDeathRateRatioTreatmentFailureHIVNeg[2];
 					for (int i = 0; i < 2; i++) {
 						if (timeOnTreatment <= simContext->getTBInputs()->TBDeathRateRatioTxFailureBounds[i]) {
-							deathRateRatioTx = simContext->getTBInputs()->TBDeathRateRatioTreatmentFailureHIVNeg[i];;
+							deathRateRatioTx = simContext->getTBInputs()->TBDeathRateRatioTreatmentFailureHIVNeg[i];
 							break;
 						}	
 					}
@@ -185,7 +188,7 @@ void TBDiseaseUpdater::performMonthlyUpdates() {
 					deathRateRatioTx = simContext->getTBInputs()->TBDeathRateRatioTreatmentSuccessHIVPos[2][patient->getDiseaseState()->currTrueCD4Strata];
 					for (int i = 0; i < 2; i++) {
 						if (timeOnTreatment <= simContext->getTBInputs()->TBDeathRateRatioTxSuccessBounds[i]) {
-							deathRateRatioTx = simContext->getTBInputs()->TBDeathRateRatioTreatmentSuccessHIVPos[i][patient->getDiseaseState()->currTrueCD4Strata];;
+							deathRateRatioTx = simContext->getTBInputs()->TBDeathRateRatioTreatmentSuccessHIVPos[i][patient->getDiseaseState()->currTrueCD4Strata];
 							break;
 						}	
 					}
@@ -194,7 +197,7 @@ void TBDiseaseUpdater::performMonthlyUpdates() {
 					deathRateRatioTx = simContext->getTBInputs()->TBDeathRateRatioTreatmentFailureHIVPos[2][patient->getDiseaseState()->currTrueCD4Strata];
 					for (int i = 0; i < 2; i++) {
 						if (timeOnTreatment <= simContext->getTBInputs()->TBDeathRateRatioTxFailureBounds[i]) {
-							deathRateRatioTx = simContext->getTBInputs()->TBDeathRateRatioTreatmentFailureHIVPos[i][patient->getDiseaseState()->currTrueCD4Strata];;
+							deathRateRatioTx = simContext->getTBInputs()->TBDeathRateRatioTreatmentFailureHIVPos[i][patient->getDiseaseState()->currTrueCD4Strata];
 							break;
 						}	
 					}
@@ -221,18 +224,8 @@ void TBDiseaseUpdater::performMonthlyUpdates() {
 }
  /* end performMonthlyUpdates */			
 
-/** \brief performUninfectedTBUpdates determines if a first TB infection occurs from the no history state*/
-void TBDiseaseUpdater::performUninfectedTBUpdates() {
-	//Roll for TB infection, or reinfection if they previously had Latent TB which was treated with prophylaxis before it activated
-	rollForInfection(SimContext::TB_STATE_UNINFECTED);
-} /* end performUninfectedTBUpdates */
-
-/** \brief performLatentTBUpdates determines if TB reactivates or a reinfection occurs from the latent state */
-void TBDiseaseUpdater::performLatentTBUpdates() {
-	//Roll for TB reinfection
-	rollForInfection(SimContext::TB_STATE_LATENT);
-	//If a patient with Latent TB gets reinfected, their TB state will still be Latent, but they may have a different TB drug resistance strain. They can be reinfected and have their TB activated in the same month
-
+/** \brief rollForTBActivation determines if TB reactivates or a reinfection occurs from the latent state */
+void TBDiseaseUpdater::rollForTBActivation() {
 	const SimContext::TBInputs *tbInputs = simContext->getTBInputs();
 
 	// Calculate probability of activation
@@ -289,6 +282,7 @@ void TBDiseaseUpdater::performLatentTBUpdates() {
 			if (patient->getGeneralState()->monthNum > patient->getTBState()->monthOfProphStop + effHorizon){
 				int monthsSinceDecay = patient->getGeneralState()->monthNum - (patient->getTBState()->monthOfProphStop + effHorizon);
 				double propDecay = (double) monthsSinceDecay / decayPeriod;
+				// interpolating the efficacy between the original efficacy value and 0
 				efficacy *= (1-propDecay);
 			}
 			probActivate = CepacUtil::probRateMultiply(probActivate, 1 - efficacy);
@@ -304,15 +298,9 @@ void TBDiseaseUpdater::performLatentTBUpdates() {
 	else if (patient->getTBState()->hasStoppedTreatmentOrEmpiric){
 		int recentTreatNum = patient->getTBState()->mostRecentTreatNum;
 		if(patient->getGeneralState()->monthNum <=
-			patient->getTBState()->monthOfTreatmentOrEmpiricStop+
+			patient->getTBState()->monthOfTreatmentOrEmpiricStop +
 			tbInputs->TBTreatments[recentTreatNum].monthsOfEfficacyActivation[tbStrain]){
 				effectiveTreatNum = recentTreatNum;
-		}	
-	}
-	else if(patient->getTBState()->observedHistActiveTBAtEntry){
-		int recentTreatNum = patient->getTBState()->mostRecentTreatNum;
-		if(patient->getGeneralState()->monthNum + patient->getTBState()->monthsSinceInitTBTreatStopAtEntry <= tbInputs->TBTreatments[recentTreatNum].monthsOfEfficacyActivation[tbStrain]){
-			effectiveTreatNum = recentTreatNum;
 		}	
 	}
 
@@ -384,54 +372,17 @@ void TBDiseaseUpdater::performLatentTBUpdates() {
 				patient->getTBState()->currTrueTBTracker[SimContext::TB_TRACKER_SYMPTOMS]?"Yes":"No");
 		}
 	}
-} /* end performLatentTBUpdates */
+} /* end rollForTBActivation */
 
-/** \brief performActivePulmTBUpdates handles transitions from the active pulm tb state */
-void TBDiseaseUpdater::performActivePulmTBUpdates() {
+/** \brief rollForTBSelfCure handles transitions from the active pulm tb state */
+void TBDiseaseUpdater::rollForTBSelfCure() {
 	//roll for self-cure
 	if(simContext->getTBInputs()->enableSelfCure){
 		int monthsSinceAct = patient->getGeneralState()->monthNum - patient->getTBState()->monthOfTBStateChange;
 		if (monthsSinceAct == simContext->getTBInputs()->selfCureTime)
 			setTBSelfCure(true);
 	}
-} /* end performActivePulmTBUpdates */
-
-/** \brief performActiveExtraPulmTBUpdates handles transitions from the active extra pulm TB state */
-void TBDiseaseUpdater::performActiveExtraPulmTBUpdates() {
-	//roll for self-cure
-	if(simContext->getTBInputs()->enableSelfCure){
-		int monthsSinceAct = patient->getGeneralState()->monthNum - patient->getTBState()->monthOfTBStateChange;
-		if (monthsSinceAct == simContext->getTBInputs()->selfCureTime)
-			setTBSelfCure(true);
-	}
-} /* end performActiveExtraPulmTBUpdates */
-
-/** \brief performPrevTreatTBUpdates handles transitions from the previously treated (successful) TB state */
-void TBDiseaseUpdater::performPrevTreatTBUpdates() {
-	//Roll for TB reinfection
-	rollForInfection(SimContext::TB_STATE_PREV_TREATED);
-	//If reinfected, TB state changes to Latent
-	if (patient->getTBState()->currTrueTBDiseaseState != SimContext::TB_STATE_PREV_TREATED)
-		return;
-
-	// patients who experienced self-cure have strong immune systems and will not relapse
-	if(!patient->getTBState()->isSelfCured){
-		rollForRelapse(SimContext::TB_STATE_PREV_TREATED);
-	}	
-} /* end performPrevTreatTBUpdates */
-
-/** \brief performTreatDefaultTBUpdates handles transitions from the previously treated but defaulted TB state*/
-void TBDiseaseUpdater::performTreatDefaultTBUpdates() {
-	//Roll for TB reinfection
-	rollForInfection(SimContext::TB_STATE_TREAT_DEFAULT);
-	//If reinfected, TB state changes to Latent
-	if (patient->getTBState()->currTrueTBDiseaseState != SimContext::TB_STATE_TREAT_DEFAULT)
-		return;
-
-	rollForRelapse(SimContext::TB_STATE_TREAT_DEFAULT);
-} /* end performTreatDefaultTBUpdates */
-
-
+} /* end rollForTBSelfCure */
 
 /** \brief rollForTBSymptoms checks to see if patients aquire TB symptoms that month and also clears TB symptoms from the previous month (active TB states do not clear symptoms
  */
@@ -535,6 +486,7 @@ void TBDiseaseUpdater::rollForInfection(SimContext::TB_STATE tbState) {
 			if(patient->getGeneralState()->monthNum > patient->getTBState()->monthOfProphStop + effHorizon){
 				int monthsSinceDecay = patient->getGeneralState()->monthNum - (patient->getTBState()->monthOfProphStop + effHorizon);
 				double propDecay = (double) monthsSinceDecay / decayPeriod;
+				// interpolating the efficacy between the original efficacy value and 0
 				efficacy *= (1-propDecay);
 			}
 			probInfect = CepacUtil::probRateMultiply(probInfect, 1 - efficacy);
@@ -562,13 +514,6 @@ void TBDiseaseUpdater::rollForInfection(SimContext::TB_STATE tbState) {
 		if(patient->getGeneralState()->monthNum <=patient->getTBState()->monthOfTreatmentOrEmpiricStop + monthsOfEfficacy){
 			effectiveTreatNum = recentTreatNum;
 		}	
-	}
-	else if (patient->getTBState()->observedHistActiveTBAtEntry){
-		int recentTreatNum = patient->getTBState()->mostRecentTreatNum;
-		SimContext::TB_STRAIN tbStrain = patient->getTBState()->currTrueTBResistanceStrain;
-		if(patient->getGeneralState()->monthNum + patient->getTBState()->monthsSinceInitTBTreatStopAtEntry <= tbInputs->TBTreatments[recentTreatNum].monthsOfEfficacyReinfection[tbStrain]){
-			effectiveTreatNum = recentTreatNum;
-		}
 	}
 
 	if (effectiveTreatNum != SimContext::NOT_APPL) {
@@ -660,19 +605,9 @@ void TBDiseaseUpdater::rollForRelapse(SimContext::TB_STATE tbState) {
 	float treatMult = 1.0;
 	if (patient->getTBState()->hasStoppedTreatmentOrEmpiric){
 		timeSinceTreatment = patient->getGeneralState()->monthNum - patient->getTBState()->monthOfTreatmentOrEmpiricStop;
-
-		if(patient->getTBState()->observedHistActiveTBAtEntry){
-			timeSinceInitTreatment = patient->getTBState()->monthsSinceInitTBTreatStopAtEntry + patient->getGeneralState()->monthNum;
-		}
-		else{
 			timeSinceInitTreatment = patient->getGeneralState()->monthNum - patient->getTBState()->monthOfInitialTreatmentStop;
 		}
-	}
-	// Since self-cures cannot relapse, if they have not stopped treatment since model start then they must have stopped treatment before model entry
-	else {
-		timeSinceInitTreatment = patient->getTBState()->monthsSinceInitTBTreatStopAtEntry + patient->getGeneralState()->monthNum;
-		timeSinceTreatment = timeSinceInitTreatment;
-	}
+
 	// Check whether they are within the duration for the treatment relapse rate multiplier
 	int treatNum = patient->getTBState()->mostRecentTreatNum;
 	if(timeSinceTreatment <= tbInputs->TBTreatments[treatNum].relapseMultDuration){

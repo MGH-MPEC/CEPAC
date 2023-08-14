@@ -214,12 +214,6 @@ public:
 	/** Strings corresponding to the emergencies in SimContext::EMERGENCY_TYPE (for trace output; non-emergencies not currently included) */
 	static const char* EMERGENCY_TYPE_STRS[];
 
-	/* LTFU constants */
-	/** The size of SimContext::LTFU_COEFF */
-	static const int LTFU_NUM_COEFF = 7;
-	/** An enum of the LTFU regression coefficients */
-	enum LTFU_COEFF {LTFU_BACKGROUND, LTFU_AGE, LTFU_GENDER, LTFU_HISTORY,
-		LTFU_T1, LTFU_T1_T2, LTFU_T2};
 	/** The size of SimContext::RTC_COEFF */
 	static const int RTC_NUM_COEFF = 5;
 	/** An enum of the return-to-care regression coefficients */
@@ -412,7 +406,6 @@ public:
 	static const char *TB_DIAG_STATUS_STRS[];
 	/** Size of SimContext::TB_CARE */
 	static const int TB_CARE_NUM = 3;
-	//static const char *TB_CARE_STRS[];
 	/** An enum of the different states of TB care */
 	enum TB_CARE {TB_CARE_UNLINKED, TB_CARE_IN_CARE, TB_CARE_LTFU};
 	/** unfavorable outcomes for TB treatment (first regimen only)*/
@@ -608,10 +601,8 @@ public:
 		/** RunSpecs D7 */
 		double discountFactor;
 		double originalDiscRate;
-		/** RunSpecs F9 */
+		/** RunSpecs E9 */
 		double maxPatientCD4;
-		/** RunSpecs F10 */
-		bool enableARTCD4Envelope;
 		/** RunSpecs F36-F38 */
 		int monthRecordARTEfficacy[ART_NUM_MTHS_RECORD];
 		/** RunSpecs E12 */
@@ -917,15 +908,16 @@ public:
 		double regressionCoefficientsRTC[RTC_NUM_COEFF];
 		double CD4ThresholdRTC;
 		//LTFU W8-W22 **/
-		bool severeOIsRTC[SimContext::OI_NUM];
-		//LTFU U30-U31 **/
+		bool severeOIsRTC[OI_NUM];
+		//LTFU U30-U32 **/
 		int maxMonthsAfterObservedFailureToRestartRegimen;
 		double probRestartRegimenWithoutObsvervedFailure;
-		//LTFU Q36-Z42 **/
+		bool recheckARTStartPoliciesAtRTC;
+		//LTFU Q37-Z44 **/
 		bool useProbSuppByPrevOutcome;
 		double probSuppressionWhenReturnToFailed[ART_NUM_LINES];
 		double probSuppressionWhenReturnToSuppressed[ART_NUM_LINES];
-		//LTFU T46-T47 **/
+		//LTFU T48-T49 **/
 		double probResumeInterventionRTC;
 		double costResumeInterventionRTC;
 
@@ -1219,7 +1211,7 @@ public:
 		double clinicVisitCostRoutine[COST_AGE_CAT_NUM][GENDER_NUM][CD4_NUM_STRATA][COST_NUM_TYPES];
 	}; /* end CostInputs */
 
-	/* TBInputs class contains inputs from the TB tab,
+	/* TBInputs class contains inputs from the TB tabs,
 		one per simulation context */
 	class TBInputs {
 	public:
@@ -1396,7 +1388,7 @@ public:
 		double probPulmonaryOnRelapseHIVNeg;
 		double probPulmonaryOnRelapseHIVPos[CD4_NUM_STRATA];
 
-		//TB T68-T74
+		//TB T66-T72
 		double probSputumHiOnRelapsePulmHIVNeg;
 		double probSputumHiOnRelapsePulmHIVPos[CD4_NUM_STRATA];
 
@@ -1523,16 +1515,17 @@ public:
 		double TBDiagnosticsInitIntervalProb;
 		int TBDiagnosticsInitInterval[TB_DIAG_INIT_POLICY_INTV_NUM];
 		int TBDiagnosticsInitIntervalBounds[TB_DIAG_INIT_POLICY_INTV_NUM-1];
+		int TBDiagnosticsInitMinMthsPostTreat;
 
-		//TBDiag C17-E20
+		//TBDiag C19-E22
 		int TBDiagnosticsTestOrder[2][TB_DIAG_TEST_ORDER_NUM];
 		bool TBDiagnosticsTestOrderDST[2][TB_DIAG_TEST_ORDER_NUM];
 
-		//TBDiag C80-H81
+		//TBDiag C82-H83
 		double TBDiagnosticsInitInTreatmentHIVNeg[TB_NUM_STATES];
 		double TBDiagnosticsInitInTreatmentHIVPos[TB_NUM_STATES];
 
-		//TBDiag A24-K35
+		//TBDiag F27-K37
 		bool TBDiagnosticSequenceMatrix2Tests[TB_DIAG_STATUS_NUM];
 		bool TBDiagnosticSequenceMatrix3Tests[TB_DIAG_STATUS_NUM][TB_DIAG_STATUS_NUM];
 		bool TBDiagnosticSequenceMatrix4Tests[TB_DIAG_STATUS_NUM][TB_DIAG_STATUS_NUM][TB_DIAG_STATUS_NUM];
@@ -1554,10 +1547,10 @@ public:
 		double probHIVDetUponLinkageIntegrated;
 		double probHIVDetUponLinkageNonIntegrated;
 
-		TBTest TBTests[SimContext::TB_NUM_TESTS];
+		TBTest TBTests[TB_NUM_TESTS];
 
 		//TBTreat C5-G14
-		double TBTreatmentProbInitialLine[2][SimContext::TB_NUM_STRAINS][TB_NUM_TREATMENTS];
+		double TBTreatmentProbInitialLine[2][TB_NUM_STRAINS][TB_NUM_TREATMENTS];
 
 		//TBTreat C20-F29
 		double TBTreatmentProbRepeatLine[TB_NUM_TREATMENTS];
@@ -1568,9 +1561,9 @@ public:
 		double monthsToTreatmentStdDev;
 		double probEmpiricWithObservedHistMDR;
 		double probEmpiricWithObservedHistXDR;
-		int empiricTreatmentNum[SimContext::TB_NUM_STRAINS];
+		int empiricTreatmentNum[TB_NUM_STRAINS];
 
-		TBTreatment TBTreatments[SimContext::TB_NUM_TREATMENTS];
+		TBTreatment TBTreatments[TB_NUM_TREATMENTS];
 
 
 	}; /* end TBInputs */

@@ -285,7 +285,7 @@ public:
 		/** Month the patient linked into care*/
 		int monthOfLinkage;
 		SimContext::HIV_CARE careState;
-		/** True if the patient is high risk for HIV, false if low risk (only matters for HIV negative patients in the testing module for determining incidence rate to use)*/
+		/** True if the patient is high risk for HIV or HIV+, false if low risk (currently only will roll for a risk level if isPrevalentHIVCase = false; used to determine incidence prob and PrEP outcomes) - all Pediatric HIV-negative patients are high risk*/
 		bool isHighRiskForHIV;
 		/** The current HIV incidence reduction multiplier, to be applied to the patient's probability of HIV infection if enabled */
 		double HIVIncReducMultiplier;
@@ -596,8 +596,7 @@ public:
 		bool hasTrueHistoryTB;
 		/** True if the patient enters the model in either the Previously Treated or Treatment Default TB state */
 		bool observedHistActiveTBAtEntry;
-		/** Number of months since initial treatment stopped if the patient entered the model in the Previously Treated or Treatment Default state - assumed to have had one round of treatmnent so far */
-		int monthsSinceInitTBTreatStopAtEntry;
+
 		/** An array storing current results of all TB tests in the current test chain*/
 		SimContext::TB_DIAG_STATUS testResults[SimContext::TB_DIAG_TEST_ORDER_NUM];
 		/** The index of the current TB test in the testing chain - not the number of the test itself */
@@ -655,7 +654,7 @@ public:
 		int monthOfTBPosDiagnosis;
 		/** True if the patient is on TB treatment*/
 		bool isOnTreatment;
-		/** True if the patient has ever completed treatment (empiric or not)*/
+		/** True if the patient has ever completed treatment (empiric or not) - includes before model entry if started in Prev Treated or Treat Default states */
 		bool everCompletedTreatmentOrEmpiric;
 		/** True if patient has ever received treatment or empiric - includes before model entry if initially in the Prev Treated or Treat Default States */
 		bool everOnTreatmentOrEmpiric;
@@ -679,9 +678,9 @@ public:
 		bool nextTreatmentIsRepeat;
 		/** An integer representing the month the patient started TB treatment*/
 		int monthOfTreatmentStart;
-		/** An integer representing the month patient most recently finished either regular or Empiric Treatment */
+		/** An integer representing the month patient most recently finished either regular or Empiric Treatment- can be negative if observedHistActiveTBAtEntry is true */
 		int monthOfTreatmentOrEmpiricStop;
-		/** An integer representing the month the patient finished initial TB treatment*/
+		/** An integer representing the month the patient finished initial TB treatment - can be negative if observedHistActiveTBAtEntry is true */
 		int monthOfInitialTreatmentStop;
 		/** An integer representing the time the patient has already been on the TB treatment */
 		int previousTreatmentDuration;

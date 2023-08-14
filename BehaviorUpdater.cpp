@@ -311,7 +311,7 @@ void BehaviorUpdater::performMonthlyUpdates() {
 			}
 			// if patient is not in TB care or in TB care but still on proph roll for proph stop
 			if(patient->getTBState()->isOnProph){
-				double randNum = CepacUtil::getRandomDouble(30031, patient);
+				randNum = CepacUtil::getRandomDouble(30031, patient);
 				if(randNum < simContext->getTBInputs()->probStopTBProphAtHIVLTFU){
 					stopCurrTBProph();
 					// check first whether they are now ineligible to resume TB proph due to major toxicity

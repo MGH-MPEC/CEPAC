@@ -20,18 +20,10 @@ public:
 	void performMonthlyUpdates();
 
 private:
-	/* performUninfectedTBUpdates manages TB updates for uninfected population*/
-	void performUninfectedTBUpdates();
-	/* performLatentTBUpdates manages TB updates for latent state */
-	void performLatentTBUpdates();
-	/* performActivePulmTBUpdates manages TB updates for active pulmonary state */
-	void performActivePulmTBUpdates();
-	/* performActiveExtraPulmTBUpdates manages TB updates for active extra pulmonary state */
-	void performActiveExtraPulmTBUpdates();
-	/* performPrevTreatTBUpdates manages TB updates for Prev Treated TB state */
-	void performPrevTreatTBUpdates();
-	/* performTreatDefaultTBUpdates manages TB updates for TB Treatment default state */
-	void performTreatDefaultTBUpdates();
+	/* rollForTBActivation checks for TB activation from the latent state */
+	void rollForTBActivation();
+	/* rollForTBSelfCure checks for self-cure from the active TB states */
+	void rollForTBSelfCure();
 	/* rollForTBSymptoms checks to see if patients aquire TB symptoms that month and also clears TB symptoms from the previous month (active TB states do not clear symptoms)*/
 	void rollForTBSymptoms();
 	/* rollForInfection handles Infection and Reinfection from the uninfected, latent, prev treated or default tb states*/

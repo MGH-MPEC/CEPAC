@@ -172,7 +172,7 @@ void HIVInfectionUpdater::performInitialUpdates() {
 			infectedState = SimContext::HIV_INF_NEG;			
 			setCareState(SimContext::HIV_CARE_NEG);		
 		}
-		setInfectedHIVState(infectedState, true, false, true);
+		setInfectedHIVState(infectedState, true, true);
 		
 		//Roll for age of serorversion
 		if (simContext->getEIDInputs()->enableHIVTestingEID){
@@ -221,7 +221,7 @@ void HIVInfectionUpdater::performInitialUpdates() {
 
 		/** isInitial is true if this is a prevalent case (was true by default, but this changed with transmission model's need to predefine incidence cases) */
 		bool isInitial = !(patient->getGeneralState()->predefinedAgeAndGender && !patient->getDiseaseState()->isPrevalentHIVCase);
-		setInfectedHIVState(infectedState, isInitial, isHighRisk, true);
+		setInfectedHIVState(infectedState, isInitial, true, isHighRisk);
 		if (infectedState == SimContext::HIV_INF_NEG)
 			setCareState(SimContext::HIV_CARE_NEG);
 
@@ -547,7 +547,7 @@ void HIVInfectionUpdater::performHIVNewInfectionUpdates(){
 	if ((patient->getPedsState()->ageCategoryPediatrics == SimContext::PEDS_AGE_ADULT) || patient->getGeneralState()->isAdolescent){
 		/** For adults and adolescents:
 		/* - Update the Patient's infected state to acute infected */
-		setInfectedHIVState(SimContext::HIV_INF_ACUTE_SYN, false, false, true);
+		setInfectedHIVState(SimContext::HIV_INF_ACUTE_SYN, false, true);
 		setDetectedHIVState(false);
 
 		/** - Set the CD4 level for an incident case of acute HIV infection */
@@ -608,7 +608,7 @@ void HIVInfectionUpdater::performHIVNewInfectionUpdates(){
 
 		/** - Update pediatrics and regular HIV state to positive */
 		setInfectedPediatricsHIVState(SimContext::PEDS_HIV_POS_PP, false);
-		setInfectedHIVState(SimContext::HIV_INF_ACUTE_SYN, false, false, true);
+		setInfectedHIVState(SimContext::HIV_INF_ACUTE_SYN, false, true);
 		setDetectedHIVState(false);
 
 		/** - Set the initial CD4 percentage for the newly infected infant */
@@ -650,10 +650,10 @@ void HIVInfectionUpdater::performHIVNewInfectionUpdates(){
 void HIVInfectionUpdater::performAcuteToChronicHIVUpdates() {
 	/** Set the infection state based on the prior OI history (symptomatic or asymptomatic)*/
 	if (patient->getDiseaseState()->typeTrueOIHistory == SimContext::HIST_EXT_N) {
-		setInfectedHIVState(SimContext::HIV_INF_ASYMP_CHR_POS, false, false, false);
+		setInfectedHIVState(SimContext::HIV_INF_ASYMP_CHR_POS, false, false);
 	}
 	else {
-		setInfectedHIVState(SimContext::HIV_INF_SYMP_CHR_POS, false, false, false);
+		setInfectedHIVState(SimContext::HIV_INF_SYMP_CHR_POS, false, false);
 	}
 
 	if (!patient->getGeneralState()->isPediatric){

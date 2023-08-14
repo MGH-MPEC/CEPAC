@@ -74,13 +74,11 @@ void BeginMonthUpdater::performInitialUpdates() {
 			ageMonthsMean = simContext->getCohortInputs()->initialAgeMean;
 			ageMonthsStdDev = simContext->getCohortInputs()->initialAgeStdDev;
 		}
-        ageMonths = (int) (CepacUtil::getRandomGaussian(ageMonthsMean, ageMonthsStdDev, 20020, patient) + 0.5);
-    }
-
-	if (ageMonths < 0)
-		ageMonths = 0;
-	else if (ageMonths > 1200)
-		ageMonths = 1200;
+		ageMonths = -1;
+		while ((ageMonths < 0) || (ageMonths > 1200)){
+        	ageMonths = (int) (CepacUtil::getRandomGaussian(ageMonthsMean, ageMonthsStdDev, 20020, patient) + 0.5);
+    	}
+	}
 
 	/** If we want the pre-assigned age and gender (i.e. transmission model), set that here */
 	if (this->patient->getGeneralState()->predefinedAgeAndGender){
@@ -161,7 +159,7 @@ void BeginMonthUpdater::performMonthlyUpdates() {
 							patient->getPedsState()->motherOnSuppressedART? "Suppressed" : "Not Suppressed");
 
 				}
-				tracer->printTrace(1, "  HIV state: HIVneg\n");
+				tracer->printTrace(1, "  HIV state: HIVneg, HIV risk level: %s\n", patient->getMonitoringState()->isHighRiskForHIV?"High":"Low");
 
 				tracer->printTrace(1, "  On PrEP: %s\n", patient->getMonitoringState()->hasPrEP?"Yes":"No");	
 			} //end if tracing is enabled
@@ -247,7 +245,7 @@ void BeginMonthUpdater::performMonthlyUpdates() {
 					
 					if(patient->getTBState()->observedHistActiveTBAtEntry){
 						tracer->printTrace(1, "  TB Treatment %d stopped %d m ago;\n", 
-							patient->getTBState()->mostRecentTreatNum, patient->getTBState()->monthsSinceInitTBTreatStopAtEntry);
+							patient->getTBState()->mostRecentTreatNum, (-1 * patient->getTBState()->monthOfInitialTreatmentStop));
 					}	
 				}
 			}

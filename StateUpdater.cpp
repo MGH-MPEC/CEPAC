@@ -163,27 +163,40 @@ void StateUpdater::setInitialTBProphState() {
  *  Also sets the patient not to be scheduled to start any TB treatment and determines initial TB treatment history for those who start the model with such a history
  * */
 void StateUpdater::setInitialTBTreatmentState() {
-	bool everCompletedTreatment = false;
+	patient->tbState.isScheduledForTreatment = false;
+	patient->tbState.isOnTreatment = false;
+	patient->tbState.isOnEmpiricTreatment = false;
+	patient->tbState.hasIncompleteTreatment = false;
+	patient->tbState.everHadNonInitialTreatmentOrEmpiric = false;
+	patient->tbState.willIncreaseResistanceUponDefault = false;
+	patient->tbState.monthOfMortEfficacyStop = SimContext::NOT_APPL;
+	for(int i = 0; i < SimContext::TB_NUM_UNFAVORABLE; i++)
+		patient->tbState.hasUnfavorableOutcome[i] = false;
+	
 	if(patient->tbState.observedHistActiveTBAtEntry){
 		patient->tbState.everOnTreatmentOrEmpiric = true;
+		patient->tbState.hasStoppedTreatmentOrEmpiric = true;
+		// Treatment stop or transition to treatment default TB state must have occurred at least 1 month ago to keep outcomes synced with those who stop treatment after model entry
 		double monthsSinceStopMean = simContext->getTBInputs()->monthsSinceInitTreatStopMean;
 		double monthsSinceStopStdDev = simContext->getTBInputs()->monthsSinceInitTreatStopStdDev;
 		int monthsSinceInitTreatStop = (int) (CepacUtil::getRandomGaussian(monthsSinceStopMean, monthsSinceStopStdDev, 13020, patient) + 0.5);
 		if(patient->tbState.currTrueTBDiseaseState == SimContext::TB_STATE_TREAT_DEFAULT){
-			if(monthsSinceInitTreatStop < simContext->getTBInputs()->monthsToLongTermEffectsLTFU){
-				monthsSinceInitTreatStop = simContext->getTBInputs()->monthsToLongTermEffectsLTFU;
+			patient->tbState.everCompletedTreatmentOrEmpiric = false;
+			if(monthsSinceInitTreatStop < simContext->getTBInputs()->monthsToLongTermEffectsLTFU + 1){
+				monthsSinceInitTreatStop = simContext->getTBInputs()->monthsToLongTermEffectsLTFU + 1;
 			}
 		}
 		// Previously Treated
 		else{
-			if(monthsSinceInitTreatStop < 0){
-				monthsSinceInitTreatStop = 0;
+			patient->tbState.everCompletedTreatmentOrEmpiric = true;
+			if(monthsSinceInitTreatStop < 1){
+				monthsSinceInitTreatStop = 1;
 			}	
-			everCompletedTreatment = true;
 		}	
-		patient->tbState.monthsSinceInitTBTreatStopAtEntry = monthsSinceInitTreatStop;
+		patient->tbState.monthOfInitialTreatmentStop = -1 * monthsSinceInitTreatStop;
+		patient->tbState.monthOfTreatmentOrEmpiricStop = patient->tbState.monthOfInitialTreatmentStop;
 		// Determine the initial TB treatment line they stopped before model entry - the assumption is made that their TB strain was identified correctly because they were successfully cured by this treatment
-		int lineNum = 0;
+		int lineNum = SimContext::TB_NUM_TREATMENTS - 1;
 		SimContext::TB_STRAIN obsvStrain = patient->tbState.currTrueTBResistanceStrain;
 		double randNum = CepacUtil::getRandomDouble(13021, patient);
 		for (int i = 0; i < SimContext::TB_NUM_TREATMENTS; i++) {
@@ -197,18 +210,9 @@ void StateUpdater::setInitialTBTreatmentState() {
 	}
 	else{
 	patient->tbState.everOnTreatmentOrEmpiric = false;
+		patient->tbState.hasStoppedTreatmentOrEmpiric = false;
+		patient->tbState.everCompletedTreatmentOrEmpiric = false;
 	}
-	patient->tbState.everCompletedTreatmentOrEmpiric = everCompletedTreatment;
-	patient->tbState.isOnTreatment = false;
-	patient->tbState.everHadNonInitialTreatmentOrEmpiric = false;
-	patient->tbState.isScheduledForTreatment = false;
-	patient->tbState.isOnEmpiricTreatment = false;
-	patient->tbState.hasIncompleteTreatment = false;
-	patient->tbState.hasStoppedTreatmentOrEmpiric = false;
-	patient->tbState.willIncreaseResistanceUponDefault = false;
-	patient->tbState.monthOfMortEfficacyStop = SimContext::NOT_APPL;
-	for(int i = 0; i < SimContext::TB_NUM_UNFAVORABLE; i++)
-		patient->tbState.hasUnfavorableOutcome[i] = false;
 } /* end setInitialTBTreatmentState */
 
 /** \brief incrementMonth increments the simulation month number and patient age by 1
@@ -310,13 +314,13 @@ void StateUpdater::setHIVIncReducMultiplier(double reducMult){
  *
  *	\param infectedState a SimContext::HIV_INF (HIV infection state) to set the patient to
  *	\param isInitial a bool marking whether or not this is an initial (i.e. prevalent) case or not (i.e. incident case)
- *	\param isHighRisk a bool marking whether or not the patient is high risk; this only matters for HIV negative persons
- *	who draw from a different incident infection distribution
  *  \param resetTimeOfInfection if infectedState is not negative, this bool marks whether the HIV infection occurred this month 
- *
+ *  \param isHighRisk a bool defaulting to true marking whether or not the patient is high risk; 
+ * this only matters for people who start the model HIV-negative and draw from a different incident 
+ * infection distribution/ PrEP inputs; others default to true
  *	All statistics counting different infection types/times are incremented in this function
  **/
-void StateUpdater::setInfectedHIVState(SimContext::HIV_INF infectedState, bool isInitial, bool isHighRisk, bool resetTimeOfInfection) {
+void StateUpdater::setInfectedHIVState(SimContext::HIV_INF infectedState, bool isInitial, bool resetTimeOfInfection, bool isHighRisk) {
 	patient->diseaseState.infectedHIVState = infectedState;
 	if (infectedState != SimContext::HIV_INF_NEG) {
 		// Currently HIV_POS is identical to HIV_INF, but with the first value HIV_INF_NEG removed - if either enum changes this will need to change
@@ -1824,7 +1828,7 @@ void StateUpdater::setTransmRiskCategory(SimContext::TRANSM_RISK risk) {
 	patient->generalState.transmRiskCategory = risk;
 }
 
-/** \brief scheduleInitialCD4Test sets the initial cd4 tests after they become available
+/** \brief scheduleInitialCD4Test determines the CD4 testing interval and schedules CD4 tests accordingly. It is "initial" only in the sense that the interval may need to be updated due to changes in care state, not necessarily the first ever test to become available
  *
  * \see StateUpdater::scheduleCD4Test(bool, int)
  * \see StateUpdater::scheduleHVLTest(bool, int)
@@ -1906,7 +1910,7 @@ void StateUpdater::scheduleInitialCD4Test(int monthNum) {
 	}
 } /* end scheduleInitialCD4Test */
 
-/** \brief scheduleInitialHVLTest sets the initial hvl tests after they become available
+/** \brief scheduleInitialHVLTest determines the HVL testing interval and schedules HVL tests accordingly. It is "initial" only in the sense that the interval may need to be updated due to changes in care state, not necessarily the first ever test to become available
  *
  * \see StateUpdater::scheduleCD4Test(bool, int)
  * \see StateUpdater::scheduleHVLTest(bool, int)
@@ -1994,8 +1998,8 @@ void StateUpdater::scheduleInitialHVLTest(int monthNum) {
  * pre-ART behavior with a given CD4 threshold, CD4 and HVL tests either are or aren't scheduled for the
  * current month based on the patient's CD4 count.
  *
- * \see StateUpdater::scheduleCD4Test(bool, int)
- * \see StateUpdater::scheduleHVLTest(bool, int)
+ * \see StateUpdater::scheduleInitialCD4Test(int)
+ * \see StateUpdater::scheduleInitialHVLTest(int)
  * */
 void StateUpdater::scheduleInitialClinicVisit(int monthOfVisit) {
 	int monthNum;
@@ -3539,7 +3543,7 @@ void StateUpdater::setTBTestResultPickup(bool hasResult, int testNum, bool willP
 		patient->tbState.willDoDST = willDoDST;
 	}
 
-}/* end scheduleTBResultPickup */
+}/* end setTBTestResultPickup*/
 
 /** \brief setTBDSTTestResultPickup adds a pending result of a DST TB test to be picked up.
  * \param hasResult a bool for whether their is a result to pickup or not
@@ -3655,57 +3659,56 @@ void StateUpdater::performTBDiagnosis(int currIndex, bool atInit){
 		}
 	}	
 	if(willLink){		
-			//Set their TB state to in care
-			setTBCareState(SimContext::TB_CARE_IN_CARE);
+		//Set their TB state to in care
+		setTBCareState(SimContext::TB_CARE_IN_CARE);
+		// Output tracing if enabled
+		if (patient->generalState.tracingEnabled) {
+			tracer->printTrace(1, "**%d LINKING TO TB CARE\n", patient->generalState.monthNum);
+		}
+
+		//If patient is on empiric treatment transition them to real treatment
+		if (patient->tbState.isOnEmpiricTreatment){
+			//If patient has observed strain and empiric treatment is for different strain do not transition
+			bool doTransition = true;
+			if (patient->tbState.hasObservedTBResistanceStrain){
+				SimContext::TB_STRAIN obsvStrain = patient->tbState.currObservedTBResistanceStrain;
+				if (simContext->getTBInputs()->empiricTreatmentNum[obsvStrain] != patient->tbState.currEmpiricTreatmentNum)
+					doTransition = false;
+			}
+			if(doTransition)
+				transitionEmpiricToRealTreatment();
+		}
+		// If patient is HIV Pos and has not yet linked to HIV care, roll for detection and schedule initial visit if so
+		if (patient->diseaseState.infectedHIVState != SimContext::HIV_INF_NEG && !patient->monitoringState.isLinked){
+			double randNum = CepacUtil::getRandomDouble(140080, patient);
+			double probDet = 0;
+			if (simContext->getTBInputs()->isIntegrated)
+				probDet = simContext->getTBInputs()->probHIVDetUponLinkageIntegrated;
+			else
+				probDet = simContext->getTBInputs()->probHIVDetUponLinkageNonIntegrated;
+
+			if (randNum < probDet) {
+				if(patient->monitoringState.isDetectedHIVPositive){
+					setDetectedHIVState(true, SimContext::HIV_DET_TB_PREV_DET);
+					setLinkedState(true, SimContext::HIV_DET_TB_PREV_DET);
+				}	
+				else{
+					setDetectedHIVState(true, SimContext::HIV_DET_TB);
+					setLinkedState(true, SimContext::HIV_DET_TB);
+				}
+				// Set next month as a clinic visit
+				scheduleInitialClinicVisit(patient->generalState.monthNum +1);
+				if (patient->generalState.tracingEnabled){
+					tracer->printTrace(1, "**%d HIV DETECTED AND LINKED BY TB;\n", patient->generalState.monthNum);
+				}
+			}
+		}
+		//If they are HIV LTFU from an integrated TB/HIV clinic, check whether they should automatically be returned to care
+		else if(patient->monitoringState.careState == SimContext::HIV_CARE_LTFU && simContext->getTBInputs()->isIntegrated && simContext->getTBInputs()->RTCForHIVUponLinkageIntegrated){
+			setCurrLTFUState(SimContext::LTFU_STATE_RETURNED);
 			// Output tracing if enabled
 			if (patient->generalState.tracingEnabled) {
-				tracer->printTrace(1, "**%d LINKING TO TB CARE\n", patient->generalState.monthNum);
-			}
-
-			//If patient is on empiric treatment transition them to real treatment
-			if (patient->tbState.isOnEmpiricTreatment){
-				//If patient has observed strain and empiric treatment is for different strain do not transition
-				bool doTransition = true;
-				if (patient->tbState.hasObservedTBResistanceStrain){
-					SimContext::TB_STRAIN obsvStrain = patient->tbState.currObservedTBResistanceStrain;
-					if (simContext->getTBInputs()->empiricTreatmentNum[obsvStrain] != patient->tbState.currEmpiricTreatmentNum)
-						doTransition = false;
-				}
-				if(doTransition)
-					transitionEmpiricToRealTreatment();
-			}
-			// If patient is HIV Pos and has not yet linked to HIV care, roll for detection and schedule initial visit if so
-			if (patient->diseaseState.infectedHIVState != SimContext::HIV_INF_NEG && !patient->monitoringState.isLinked){
-				double randNum = CepacUtil::getRandomDouble(140080, patient);
-				double probDet = 0;
-				if (simContext->getTBInputs()->isIntegrated)
-					probDet = simContext->getTBInputs()->probHIVDetUponLinkageIntegrated;
-				else
-					probDet = simContext->getTBInputs()->probHIVDetUponLinkageNonIntegrated;
-
-				if (randNum < probDet) {
-					if(patient->monitoringState.isDetectedHIVPositive){
-						setDetectedHIVState(true, SimContext::HIV_DET_TB_PREV_DET);
-						setLinkedState(true, SimContext::HIV_DET_TB_PREV_DET);
-					}	
-					else{
-						setDetectedHIVState(true, SimContext::HIV_DET_TB);
-						setLinkedState(true, SimContext::HIV_DET_TB);
-					}
-
-					// Set next month as a clinic visit
-					scheduleInitialClinicVisit(patient->generalState.monthNum +1);
-					if (patient->generalState.tracingEnabled){
-						tracer->printTrace(1, "**%d HIV DETECTED AND LINKED BY TB;\n", patient->generalState.monthNum);
-					}
-				}
-			}
-			//If they are HIV LTFU from an integrated TB/HIV clinic, check whether they should automatically be returned to care
-			else if(patient->monitoringState.careState == SimContext::HIV_CARE_LTFU && simContext->getTBInputs()->isIntegrated && simContext->getTBInputs()->RTCForHIVUponLinkageIntegrated){
-				setCurrLTFUState(SimContext::LTFU_STATE_RETURNED);
-				// Output tracing if enabled
-				if (patient->generalState.tracingEnabled) {
-					tracer->printTrace(1, "**%d PATIENT RETURNED TO CARE;\n", patient->generalState.monthNum);
+				tracer->printTrace(1, "**%d PATIENT RETURNED TO CARE;\n", patient->generalState.monthNum);
 			}
 		}
 	} //end if link to TB care
@@ -3955,7 +3958,7 @@ void StateUpdater::stopCurrTBTreatment(bool isFinished, bool isCured) {
 
 	// Update patient state for stopping TB treatment
 	patient->tbState.isOnTreatment = false;
-	if(!patient->tbState.hasStoppedTreatmentOrEmpiric && !patient->tbState.observedHistActiveTBAtEntry){
+	if(!patient->tbState.hasStoppedTreatmentOrEmpiric){
 		patient->tbState.monthOfInitialTreatmentStop = patient->generalState.monthNum;
 	}
 	patient->tbState.hasStoppedTreatmentOrEmpiric = true;
@@ -4070,7 +4073,7 @@ void StateUpdater::stopEmpiricTBTreatment(bool isFinished) {
 	}
 
 	patient->tbState.isOnEmpiricTreatment = false;
-	if(!patient->tbState.hasStoppedTreatmentOrEmpiric && !patient->tbState.observedHistActiveTBAtEntry){
+	if(!patient->tbState.hasStoppedTreatmentOrEmpiric){
 		patient->tbState.monthOfInitialTreatmentStop = patient->generalState.monthNum;
 	}	
 	patient->tbState.hasStoppedTreatmentOrEmpiric = true;
@@ -4618,12 +4621,15 @@ void StateUpdater::setCurrTrueOI(SimContext::OI_TYPE oiType) {
 	// Update the longitudinal statistics for the occurrence of the OI
 	RunStats::TimeSummary *currTime = getTimeSummaryForUpdate();
 	if (currTime) {
+		currTime->numOIsTotal++;
 		SimContext::OI_TYPE oiType = patient->diseaseState.typeCurrTrueOI;
 		if (!patient->diseaseState.hasTrueOIHistory[oiType]) {
 			currTime->numPrimaryOIs[oiType]++;
+			currTime->numPrimaryOIsTotal++;
 		}
 		else {
 			currTime->numSecondaryOIs[oiType]++;
+			currTime->numSecondaryOIsTotal++;
 		}
 		if ((patient->diseaseState.typeTrueOIHistory == SimContext::HIST_EXT_N) &&
 			(simContext->getRunSpecsInputs()->firstOIsLongitLogging[oiType])) {
@@ -6222,7 +6228,7 @@ void StateUpdater::incrementCostsTBTest(double testCost, double dstCost, int tes
     incrementCostsTBCommon(totalCost, 1.0);
 
 	if (testNum > -1 && testNum < SimContext::TB_NUM_TESTS){
-        runStats->overallCosts.costsTBTestsInit[testNum] += testCost * patient->generalState.discountFactor;;
+        runStats->overallCosts.costsTBTestsInit[testNum] += testCost * patient->generalState.discountFactor;
         runStats->overallCosts.costsTBTestsDST[testNum] += dstCost * patient->generalState.discountFactor;
 	}
 }
@@ -6885,11 +6891,14 @@ void StateUpdater::updateLongitSurvival() {
 				currTime->numTBLTFU++;
 			if (patient->tbState.isOnProph)
 				currTime->numOnTBProph[patient->tbState.currProphNum][patient->tbState.currTrueTBDiseaseState]++;
-			if (patient->tbState.isOnTreatment)
-				currTime->numOnTBTreatment[patient->tbState.currTreatmentNum]++;
-			if (patient->tbState.isOnEmpiricTreatment)
-				currTime->numOnEmpiricTBTreatment[patient->tbState.currEmpiricTreatmentNum]++;
-
+			if (patient->tbState.isOnTreatment){
+				currTime->numOnTBTreatmentByState[patient->tbState.currTrueTBDiseaseState][patient->tbState.currTreatmentNum]++;
+				currTime->numOnTBTreatmentTotal[patient->tbState.currTreatmentNum]++;
+			}	
+			else if (patient->tbState.isOnEmpiricTreatment){
+				currTime->numOnEmpiricTBTreatmentByState[patient->tbState.currTrueTBDiseaseState][patient->tbState.currEmpiricTreatmentNum]++;
+				currTime->numOnEmpiricTBTreatmentTotal[patient->tbState.currEmpiricTreatmentNum]++;
+			}
 			if (patient->tbState.currTrueTBDiseaseState != SimContext::TB_STATE_UNINFECTED)
 				currTime->numTBStrain[patient->tbState.currTrueTBResistanceStrain]++;
 

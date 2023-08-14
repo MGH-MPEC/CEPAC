@@ -177,6 +177,7 @@ void HIVTestingUpdater::performMonthlyUpdates() {
 		return;
 
 	if(patient->getGeneralState()->ageMonths == simContext->getHIVTestInputs()->HIVRegularTestingStartAge && !patient->getMonitoringState()->isLinked &&simContext->getHIVTestInputs()->HIVTestAvailable){
+		// Regular screening should be initiated immediately before offering the first test to avoid giving user-defined tests to people who are underage
 		initRegularScreening(false);
 	}
 

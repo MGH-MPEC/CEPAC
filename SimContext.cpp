@@ -79,7 +79,7 @@ const char *SimContext::CLINIC_VISITS_STRS[] = {
 };
 
 const char *SimContext::EMERGENCY_TYPE_STRS[] = {
-	"Acute OI", "Testing", "ART Changes", "OI Proph Changes"
+	"Acute OI", "Testing", "ART Policies", "OI Proph Policies", "Routine"
 };
 
 const char *SimContext::ART_EFF_STRS[] = {
@@ -226,10 +226,6 @@ void SimContext::readRunSpecsInputs() {
 	// read in max actual CD4 count for patient
 	readAndSkipPast( "MaxPatCD4", inputFile );
 	fscanf( inputFile, "%lf", &runSpecsInputs.maxPatientCD4 );
-	// read in whether to enable ART CD4 envelope
-	readAndSkipPast( "EnableARTCD4Env", inputFile );
-	fscanf( inputFile, "%d", &tempBool );
-	runSpecsInputs.enableARTCD4Envelope = (bool) tempBool;
 
 	// read in mth times A - C to rec ART eff
 	readAndSkipPast( "MthRecARTEffA", inputFile );
@@ -1103,6 +1099,10 @@ void SimContext::readLTFUInputs() {
 	fscanf( inputFile, "%d", &ltfuInputs.maxMonthsAfterObservedFailureToRestartRegimen);
 	readAndSkipPast( "RTCProbTakeSameART", inputFile);
 	fscanf( inputFile, "%lf", &ltfuInputs.probRestartRegimenWithoutObsvervedFailure);
+	readAndSkipPast( "RTCRecheckARTPolicies", inputFile);
+	fscanf( inputFile, "%d", &tempBool);
+	ltfuInputs.recheckARTStartPoliciesAtRTC = (bool) tempBool;
+
 	readAndSkipPast( "RTCProbSuppByPrevOutcome", inputFile);
 	fscanf( inputFile, "%d", &tempBool);
 	ltfuInputs.useProbSuppByPrevOutcome = (bool) tempBool;
@@ -2727,6 +2727,8 @@ void SimContext::readTBInputs() {
 	readAndSkipPast( "TBDiagInitPolicyMthIntvl", file );
 	for (i = 0; i < TB_DIAG_INIT_POLICY_INTV_NUM; i++)
 		fscanf( file, "%d", &(tbInputs.TBDiagnosticsInitInterval[i]) );
+	readAndSkipPast( "TBDiagInitMinMthsPostTreatment", file );
+	fscanf( file, "%d", &(tbInputs.TBDiagnosticsInitMinMthsPostTreat) );
 
 	//Diagnostics Test order
 	readAndSkipPast( "TBDiagTestOrderNeverTreat", file );
@@ -3629,15 +3631,15 @@ void SimContext::readHIVTestInputs() {
 	for (i = 0; i < HIV_BEHAV_NUM; ++i)
 		fscanf( inputFile, "%lf", &(testingInputs.PrEPShape[i]));
 	
-	readAndSkipPast( "PrEPQoLMod", inputFile );
-	for (i = 0; i < HIV_BEHAV_NUM; ++i)
-		fscanf( inputFile, "%lf", &(testingInputs.PrEPQOL[i]));
-    readAndSkipPast( "PrEPMonthlyCost", inputFile );
-	for (i = 0; i < HIV_BEHAV_NUM; ++i)
-		fscanf( inputFile, "%lf", &(testingInputs.costPrEPMonthly[i]));
     readAndSkipPast( "PrEPStartupCost", inputFile );
 	for (i = 0; i < HIV_BEHAV_NUM; ++i)
 		fscanf( inputFile, "%lf", &(testingInputs.costPrEPInitial[i]));
+    readAndSkipPast( "PrEPMonthlyCost", inputFile );
+	for (i = 0; i < HIV_BEHAV_NUM; ++i)
+		fscanf( inputFile, "%lf", &(testingInputs.costPrEPMonthly[i]));
+	readAndSkipPast( "PrEPQoLMod", inputFile );
+	for (i = 0; i < HIV_BEHAV_NUM; ++i)
+		fscanf( inputFile, "%lf", &(testingInputs.PrEPQOL[i]));
 
 	readAndSkipPast( "PrepIncidMale", inputFile );
 	readAndSkipPast( "hiRisk", inputFile );

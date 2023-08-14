@@ -560,12 +560,13 @@ void ClinicVisitUpdater::performARTProgramUpdates() {
 	bool stiRestart = false;
 	if (!patient->getARTState()->isOnART) {
 		// If returning to care and was on ART when lost, ART should be restarted
-		if ((patient->getMonitoringState()->currLTFUState == SimContext::LTFU_STATE_RETURNED) &&
-			(patient->getMonitoringState()->monthOfLTFUStateChange == patient->getGeneralState()->monthNum) &&
-			patient->getARTState()->hasNextRegimenAvailable &&
+		if ((patient->getMonitoringState()->currLTFUState == SimContext::LTFU_STATE_RETURNED && patient->getMonitoringState()->monthOfLTFUStateChange == patient->getGeneralState()->monthNum)){
+			rtcStart = true;
+		}
+		// Check whether they should restart automatically due to RTC
+		if(rtcStart && !simContext->getLTFUInputs()->recheckARTStartPoliciesAtRTC && patient->getARTState()->hasNextRegimenAvailable &&
 			patient->getMonitoringState()->wasOnARTWhenLostToFollowUp) {
 				startNextART = true;
-				rtcStart = true;
 		}
 		// If currently on STI interruption, evaluate STI restart criteria
 		else if (patient->getARTState()->currSTIState == SimContext::STI_STATE_INTERRUPT) {
@@ -577,7 +578,7 @@ void ClinicVisitUpdater::performARTProgramUpdates() {
 		// Otherwise, evaluate normal ART starting criteria
 		else{
 			if (patient->getPedsState()->ageCategoryPediatrics >= SimContext::PEDS_AGE_LATE){
-				// If patient's next line has passed max months on art parameter set next line to the one after
+				// If patient's next line has passed max month number to start ART parameter look for the next one which is still available this month 
 				if (patient->getARTState()->hasNextRegimenAvailable){
 					int artLineNum = patient->getARTState()->nextRegimenNum;
 					const SimContext::TreatmentInputs::ARTStartPolicy &startART = simContext->getTreatmentInputs()->startART[artLineNum];
@@ -587,9 +588,14 @@ void ClinicVisitUpdater::performARTProgramUpdates() {
 						int nextRegimen = SimContext::NOT_APPL;
 						for (int i = patient->getARTState()->nextRegimenNum + 1; i < SimContext::ART_NUM_LINES; i++) {
 							if (simContext->getARTInputs(i)) {
+								// Search for the next regimen which is still available to start this calendar month by checking for max mth number inputs
+								const SimContext::TreatmentInputs::ARTStartPolicy &startART = simContext->getTreatmentInputs()->startART[i];
+								if(startART.maxMonthNum == SimContext::NOT_APPL ||
+								patient->getGeneralState()->monthNum <= startART.maxMonthNum){
 									hasNext = true;
 									nextRegimen = i;
 									break;
+								}	
 							}
 						}
 						setNextARTRegimen(hasNext, nextRegimen);
@@ -791,15 +797,13 @@ void ClinicVisitUpdater::performARTProgramUpdates() {
 				// if this is their first success on the regimen, update the patient state to indicate that they have been successful on it, then update the CD4 envelopes if enabled
 				if (!patient->getARTState()->hadSuccessOnRegimen)
 					setSuccessfulARTRegimen();
-				if (simContext->getRunSpecsInputs()->enableARTCD4Envelope){
-					if (!patient->getARTState()->overallCD4Envelope.isActive) {
-						setCD4EnvelopeRegimen(SimContext::ENVL_CD4_OVERALL, currRegimen);
-						setCD4EnvelopeSlope(SimContext::ENVL_CD4_OVERALL, cd4Slope);
-					}
-					if (!patient->getARTState()->indivCD4Envelope.isActive) {
-						setCD4EnvelopeRegimen(SimContext::ENVL_CD4_INDIV, currRegimen);
-						setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, cd4Slope);
-					}
+				if (!patient->getARTState()->overallCD4Envelope.isActive) {
+					setCD4EnvelopeRegimen(SimContext::ENVL_CD4_OVERALL, currRegimen);
+					setCD4EnvelopeSlope(SimContext::ENVL_CD4_OVERALL, cd4Slope);
+				}
+				if (!patient->getARTState()->indivCD4Envelope.isActive) {
+					setCD4EnvelopeRegimen(SimContext::ENVL_CD4_INDIV, currRegimen);
+					setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, cd4Slope);
 				}
 			}
 			//Non-adolescent adult starting successful regimen
@@ -811,16 +815,15 @@ void ClinicVisitUpdater::performARTProgramUpdates() {
 				// if this is their first success on the regimen, update the patient state to indicate that they have been successful on it, then update the CD4 envelopes if enabled
 				if (!patient->getARTState()->hadSuccessOnRegimen)
 					setSuccessfulARTRegimen();
-				if (simContext->getRunSpecsInputs()->enableARTCD4Envelope){
-					if (!patient->getARTState()->overallCD4Envelope.isActive) {
-						setCD4EnvelopeRegimen(SimContext::ENVL_CD4_OVERALL, currRegimen);
-						setCD4EnvelopeSlope(SimContext::ENVL_CD4_OVERALL, cd4Slope);
-					}
-					if (!patient->getARTState()->indivCD4Envelope.isActive) {
-						setCD4EnvelopeRegimen(SimContext::ENVL_CD4_INDIV, currRegimen);
-						setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, cd4Slope);
-					}
-				}	
+
+				if (!patient->getARTState()->overallCD4Envelope.isActive) {
+					setCD4EnvelopeRegimen(SimContext::ENVL_CD4_OVERALL, currRegimen);
+					setCD4EnvelopeSlope(SimContext::ENVL_CD4_OVERALL, cd4Slope);
+				}
+				if (!patient->getARTState()->indivCD4Envelope.isActive) {
+					setCD4EnvelopeRegimen(SimContext::ENVL_CD4_INDIV, currRegimen);
+					setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, cd4Slope);
+				}
 			}
 			//Late childhood patient starting successful regimen
 			else if (pedsAgeCat == SimContext::PEDS_AGE_LATE) {
@@ -832,15 +835,14 @@ void ClinicVisitUpdater::performARTProgramUpdates() {
 				// if this is their first success on the regimen, update the patient state to indicate that they have been successful on it, then update the CD4 envelopes if enabled
 				if (!patient->getARTState()->hadSuccessOnRegimen)
 					setSuccessfulARTRegimen();
-				if (simContext->getRunSpecsInputs()->enableARTCD4Envelope){
-					if (!patient->getARTState()->overallCD4Envelope.isActive) {
-						setCD4EnvelopeRegimen(SimContext::ENVL_CD4_OVERALL, currRegimen);
-						setCD4EnvelopeSlope(SimContext::ENVL_CD4_OVERALL, cd4Slope);
-					}
-					if (!patient->getARTState()->indivCD4Envelope.isActive) {
-						setCD4EnvelopeRegimen(SimContext::ENVL_CD4_INDIV, currRegimen);
-						setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, cd4Slope);
-					}
+
+				if (!patient->getARTState()->overallCD4Envelope.isActive) {
+					setCD4EnvelopeRegimen(SimContext::ENVL_CD4_OVERALL, currRegimen);
+					setCD4EnvelopeSlope(SimContext::ENVL_CD4_OVERALL, cd4Slope);
+				}
+				if (!patient->getARTState()->indivCD4Envelope.isActive) {
+					setCD4EnvelopeRegimen(SimContext::ENVL_CD4_INDIV, currRegimen);
+					setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, cd4Slope);
 				}
 			}
 			//Early childhood patient starting successful regimen
@@ -854,15 +856,14 @@ void ClinicVisitUpdater::performARTProgramUpdates() {
 				// if this is their first success on the regimen, update the patient state to indicate that they have been successful on it, then update the CD4 envelopes if enabled
 				if (!patient->getARTState()->hadSuccessOnRegimen)
 					setSuccessfulARTRegimen();
-				if (simContext->getRunSpecsInputs()->enableARTCD4Envelope){
-					if (!patient->getARTState()->overallCD4PercentageEnvelope.isActive) {
-						setCD4EnvelopeRegimen(SimContext::ENVL_CD4_PERC_OVERALL, currRegimen);
-						setCD4EnvelopeSlope(SimContext::ENVL_CD4_PERC_OVERALL, cd4PercSlope);
-					}
-					if (!patient->getARTState()->indivCD4PercentageEnvelope.isActive) {
-						setCD4EnvelopeRegimen(SimContext::ENVL_CD4_PERC_INDIV, currRegimen);
-						setCD4EnvelopeSlope(SimContext::ENVL_CD4_PERC_INDIV, cd4PercSlope);
-					}
+
+				if (!patient->getARTState()->overallCD4PercentageEnvelope.isActive) {
+					setCD4EnvelopeRegimen(SimContext::ENVL_CD4_PERC_OVERALL, currRegimen);
+					setCD4EnvelopeSlope(SimContext::ENVL_CD4_PERC_OVERALL, cd4PercSlope);
+				}
+				if (!patient->getARTState()->indivCD4PercentageEnvelope.isActive) {
+					setCD4EnvelopeRegimen(SimContext::ENVL_CD4_PERC_INDIV, currRegimen);
+					setCD4EnvelopeSlope(SimContext::ENVL_CD4_PERC_INDIV, cd4PercSlope);
 				}
 			}
 		} // end if (efficacy == SimContext::ART_EFF_SUCCESS)
@@ -983,7 +984,7 @@ void ClinicVisitUpdater::performARTProgramUpdates() {
 					for (int j = 0; j < SimContext::ART_NUM_TOX_PER_SEVERITY; j++) {
 						double randNum = CepacUtil::getRandomDouble(60130, patient);
 						double probTox = artInput->toxicity[currSubRegimen][i][j].probToxicity * patient->getARTState()->responseFactorCurrRegimen[SimContext::HET_OUTCOME_TOX];
-			
+
 						if (randNum < probTox) {
 							bool hasTox = false;
 							// Determine if the patient already has this toxicity effect
@@ -1041,29 +1042,32 @@ bool ClinicVisitUpdater::evaluateStartARTPolicy() {
 	}
 
 	/** Evaluate the CD4 only criteria */
-	double observedCD4 = patient->getMonitoringState()->currObservedCD4;
-	if (patient->getMonitoringState()->hasObservedCD4 &&
-		(observedCD4 >= startART.CD4BoundsOnly[SimContext::LOWER_BOUND]) &&
-		(observedCD4 <= startART.CD4BoundsOnly[SimContext::UPPER_BOUND])) {
-			return true;
+	if (patient->getMonitoringState()->hasObservedCD4){
+		double observedCD4 = patient->getMonitoringState()->currObservedCD4;
+		if((observedCD4 >= startART.CD4BoundsOnly[SimContext::LOWER_BOUND]) &&
+			(observedCD4 <= startART.CD4BoundsOnly[SimContext::UPPER_BOUND])) {
+				return true;
+		}
 	}
 
 	/** Evaluate the HVL strata only criteria */
-	SimContext::HVL_STRATA observedHVL = patient->getMonitoringState()->currObservedHVLStrata;
-	if (patient->getMonitoringState()->hasObservedHVLStrata &&
-		(observedHVL >= startART.HVLBoundsOnly[SimContext::LOWER_BOUND]) &&
+	if(patient->getMonitoringState()->hasObservedHVLStrata){
+		SimContext::HVL_STRATA observedHVL = patient->getMonitoringState()->currObservedHVLStrata;
+		if ((observedHVL >= startART.HVLBoundsOnly[SimContext::LOWER_BOUND]) &&
 		(observedHVL <= startART.HVLBoundsOnly[SimContext::UPPER_BOUND])) {
 			return true;
-	}
-
-	/** Evaluate the CD4 and HVL combined criteria */
-	if (patient->getMonitoringState()->hasObservedCD4 &&
-		(observedCD4 >= startART.CD4BoundsWithHVL[SimContext::LOWER_BOUND]) &&
-		(observedCD4 <= startART.CD4BoundsWithHVL[SimContext::UPPER_BOUND]) &&
-		patient->getMonitoringState()->hasObservedHVLStrata &&
-		(observedHVL >= startART.HVLBoundsWithCD4[SimContext::LOWER_BOUND]) &&
-		(observedHVL <= startART.HVLBoundsWithCD4[SimContext::UPPER_BOUND])) {
-			return true;
+		}
+		/** Evaluate the CD4 and HVL combined criteria */
+		if (patient->getMonitoringState()->hasObservedCD4){
+			double observedCD4 = patient->getMonitoringState()->currObservedCD4;
+			if((observedCD4 >= startART.CD4BoundsWithHVL[SimContext::LOWER_BOUND]) &&
+			(observedCD4 <= startART.CD4BoundsWithHVL[SimContext::UPPER_BOUND]) &&
+			patient->getMonitoringState()->hasObservedHVLStrata &&
+			(observedHVL >= startART.HVLBoundsWithCD4[SimContext::LOWER_BOUND]) &&
+			(observedHVL <= startART.HVLBoundsWithCD4[SimContext::UPPER_BOUND])) {
+				return true;
+			}
+		}	
 	}
 
 	/** Evaluate the acute OIs since last ART only criteria */
@@ -1077,14 +1081,16 @@ bool ClinicVisitUpdater::evaluateStartARTPolicy() {
 		return true;
 
 	/** Evaluate the acute OIs in patient's history and CD4 count criteria */
-	if ((observedCD4 != SimContext::NOT_APPL) &&
-		(observedCD4 >= startART.CD4BoundsWithOIs[SimContext::LOWER_BOUND]) &&
-		(observedCD4 <= startART.CD4BoundsWithOIs[SimContext::UPPER_BOUND])) {
-			for (int i = 0; i < SimContext::OI_NUM; i++) {
-				if (startART.OIHistoryWithCD4[i] && (patient->getMonitoringState()->numObservedOIsTotal[i] > 0)) {
-					return true;
+	if (patient->getMonitoringState()->hasObservedCD4){
+		double observedCD4 = patient->getMonitoringState()->currObservedCD4;
+		if ((observedCD4 >= startART.CD4BoundsWithOIs[SimContext::LOWER_BOUND]) &&
+			(observedCD4 <= startART.CD4BoundsWithOIs[SimContext::UPPER_BOUND])) {
+				for (int i = 0; i < SimContext::OI_NUM; i++) {
+					if (startART.OIHistoryWithCD4[i] && (patient->getMonitoringState()->numObservedOIsTotal[i] > 0)) {
+						return true;
 				}
 			}
+		}
 	}
 
 	return false;
@@ -1119,7 +1125,6 @@ bool ClinicVisitUpdater::evaluateStartARTPolicyPeds() {
 	}
 
 	/** Evaluate the CD4 only criteria */
-	double observedCD4Perc = patient->getMonitoringState()->currObservedCD4Percentage;
 	int cd4AgeCategory=0;
 	for (int i=0;i<SimContext::NUM_ART_START_CD4PERC_PEDS-1;i++){
 		if (patient->getGeneralState()->ageMonths > startART.CD4PercStageMonths[i]){
@@ -1129,20 +1134,24 @@ bool ClinicVisitUpdater::evaluateStartARTPolicyPeds() {
 			break;
 		}
 	}
-	if (patient->getMonitoringState()->hasObservedCD4Percentage &&
-		(observedCD4Perc >= startART.CD4PercBounds[cd4AgeCategory][artLineNum][SimContext::LOWER_BOUND]) &&
+	if (patient->getMonitoringState()->hasObservedCD4Percentage){
+		double observedCD4Perc = patient->getMonitoringState()->currObservedCD4Percentage;
+		if((observedCD4Perc >= startART.CD4PercBounds[cd4AgeCategory][artLineNum][SimContext::LOWER_BOUND]) &&
 		(observedCD4Perc <= startART.CD4PercBounds[cd4AgeCategory][artLineNum][SimContext::UPPER_BOUND])) {
 
 			return true;
+		}
 	}
 
 	/** Evaluate the HVL strata only criteria */
-	SimContext::HVL_STRATA observedHVL = patient->getMonitoringState()->currObservedHVLStrata;
-	if (patient->getMonitoringState()->hasObservedHVLStrata &&
-		(observedHVL >= startART.HVLBounds[artLineNum][SimContext::LOWER_BOUND]) &&
-		(observedHVL <= startART.HVLBounds[artLineNum][SimContext::UPPER_BOUND])) {
-
-			return true;
+	
+	if (patient->getMonitoringState()->hasObservedHVLStrata){
+		SimContext::HVL_STRATA observedHVL = patient->getMonitoringState()->currObservedHVLStrata;
+		if((observedHVL >= startART.HVLBounds[artLineNum][SimContext::LOWER_BOUND]) &&
+			(observedHVL <= startART.HVLBounds[artLineNum][SimContext::UPPER_BOUND])) {
+	
+				return true;
+		}
 	}
 
 	/** Evaluate the acute OIs since last ART only criteria */
@@ -1267,9 +1276,9 @@ SimContext::ART_STOP_TYPE ClinicVisitUpdater::evaluateStopARTPolicy() {
 	}
 
 	/** check if a major toxicity has occurred and is specified to cause the regimen to be stopped */
-	if (stopART.withMajorToxicty && patient->getARTState()->hasMajorToxicity)
+	if (stopART.withMajorToxicty && patient->getARTState()->hasMajorToxicity){
 		return SimContext::ART_STOP_MAJ_TOX;
-
+	}
     /** check if a chronic toxicity has occurred and is specified to cause the regimen to be stopped */
     if (patient->getARTState()->hasChronicToxSwitch){
         return SimContext::ART_STOP_CHRN_TOX;
@@ -1333,9 +1342,9 @@ SimContext::ART_STOP_TYPE ClinicVisitUpdater::evaluateStopARTPolicyPeds() {
 	}
 
 	/** check if a major toxicity has occurred and is specified to cause the regimen to be stopped */
-	if (stopART.withMajorToxicty && patient->getARTState()->hasMajorToxicity)
+	if (stopART.withMajorToxicty && patient->getARTState()->hasMajorToxicity){
 		return SimContext::ART_STOP_MAJ_TOX;
-	
+	}
 	/** check if a chronic toxicity has occurred and is specified to cause the regimen to be stopped */
     if (patient->getARTState()->hasChronicToxSwitch){
         return SimContext::ART_STOP_CHRN_TOX;
@@ -1406,29 +1415,34 @@ bool ClinicVisitUpdater::evaluateSTIInitialStopPolicy() {
 		return false;
 
 	/** Evaluate the CD4 only criteria */
-	double observedCD4 = patient->getMonitoringState()->currObservedCD4;
-	if (patient->getMonitoringState()->hasObservedCD4 &&
-		(observedCD4 >= policy.CD4BoundsOnly[SimContext::LOWER_BOUND]) &&
+	
+	if (patient->getMonitoringState()->hasObservedCD4){
+		double observedCD4 = patient->getMonitoringState()->currObservedCD4;
+		if((observedCD4 >= policy.CD4BoundsOnly[SimContext::LOWER_BOUND]) &&
 		(observedCD4 <= policy.CD4BoundsOnly[SimContext::UPPER_BOUND])) {
 			return true;
+		}
 	}
 
 	/** Evaluate the HVL strata only criteria */
-	SimContext::HVL_STRATA observedHVL = patient->getMonitoringState()->currObservedHVLStrata;
-	if (patient->getMonitoringState()->hasObservedHVLStrata &&
-		(observedHVL >= policy.HVLBoundsOnly[SimContext::LOWER_BOUND]) &&
+	if (patient->getMonitoringState()->hasObservedHVLStrata){
+		SimContext::HVL_STRATA observedHVL = patient->getMonitoringState()->currObservedHVLStrata;
+		if((observedHVL >= policy.HVLBoundsOnly[SimContext::LOWER_BOUND]) &&
 		(observedHVL <= policy.HVLBoundsOnly[SimContext::UPPER_BOUND])) {
 			return true;
-	}
+		}
 
-	/** Evaluate the CD4 and HVL combined criteria */
-	if (patient->getMonitoringState()->hasObservedCD4 &&
-		(observedCD4 >= policy.CD4BoundsWithHVL[SimContext::LOWER_BOUND]) &&
-		(observedCD4 <= policy.CD4BoundsWithHVL[SimContext::UPPER_BOUND]) &&
-		patient->getMonitoringState()->hasObservedHVLStrata &&
-		(observedHVL >= policy.HVLBoundsWithCD4[SimContext::LOWER_BOUND]) &&
-		(observedHVL <= policy.HVLBoundsWithCD4[SimContext::UPPER_BOUND])) {
-			return true;
+		/** Evaluate the CD4 and HVL combined criteria */
+		if (patient->getMonitoringState()->hasObservedCD4){
+			double observedCD4 = patient->getMonitoringState()->currObservedCD4;
+			if((observedCD4 >= policy.CD4BoundsWithHVL[SimContext::LOWER_BOUND]) &&
+			(observedCD4 <= policy.CD4BoundsWithHVL[SimContext::UPPER_BOUND]) &&
+			patient->getMonitoringState()->hasObservedHVLStrata &&
+			(observedHVL >= policy.HVLBoundsWithCD4[SimContext::LOWER_BOUND]) &&
+			(observedHVL <= policy.HVLBoundsWithCD4[SimContext::UPPER_BOUND])) {
+				return true;
+			}
+		}	
 	}
 
 	/** Evaluate the acute OIs since last ART only criteria */
@@ -1442,14 +1456,16 @@ bool ClinicVisitUpdater::evaluateSTIInitialStopPolicy() {
 		return true;
 
 	/** Evaluate the acute OIs in patient's history and CD4 count criteria */
-	if ((observedCD4 != SimContext::NOT_APPL) &&
-		(observedCD4 >= policy.CD4BoundsWithOIs[SimContext::LOWER_BOUND]) &&
-		(observedCD4 <= policy.CD4BoundsWithOIs[SimContext::UPPER_BOUND])) {
+	if (patient->getMonitoringState()->hasObservedCD4){
+		double observedCD4 = patient->getMonitoringState()->currObservedCD4;
+		if ((observedCD4 >= policy.CD4BoundsWithOIs[SimContext::LOWER_BOUND]) &&
+			(observedCD4 <= policy.CD4BoundsWithOIs[SimContext::UPPER_BOUND])) {
 			for (int i = 0; i < SimContext::OI_NUM; i++) {
 				if (policy.OIHistoryWithCD4[i] && (patient->getMonitoringState()->numObservedOIsTotal[i] > 0)) {
 					return true;
 				}
 			}
+		}
 	}
 
 	return false;
@@ -1469,29 +1485,32 @@ SimContext::ART_FAIL_TYPE ClinicVisitUpdater::evaluateSTIEndpointPolicy() {
 		return SimContext::ART_FAIL_NOT_FAILED;
 
 	/** Evaluate the CD4 only criteria */
-	double observedCD4 = patient->getMonitoringState()->currObservedCD4;
-	if (patient->getMonitoringState()->hasObservedCD4 &&
-		(observedCD4 >= policy.CD4BoundsOnly[SimContext::LOWER_BOUND]) &&
-		(observedCD4 <= policy.CD4BoundsOnly[SimContext::UPPER_BOUND])) {
+	if (patient->getMonitoringState()->hasObservedCD4){
+		double observedCD4 = patient->getMonitoringState()->currObservedCD4;
+		if((observedCD4 >= policy.CD4BoundsOnly[SimContext::LOWER_BOUND]) &&
+		   (observedCD4 <= policy.CD4BoundsOnly[SimContext::UPPER_BOUND])) {
 			return SimContext::ART_FAIL_IMMUNOLOGIC;
+		}
 	}
 
 	/** Evaluate the HVL strata only criteria */
+	if (patient->getMonitoringState()->hasObservedHVLStrata){
 	SimContext::HVL_STRATA observedHVL = patient->getMonitoringState()->currObservedHVLStrata;
-	if (patient->getMonitoringState()->hasObservedHVLStrata &&
-		(observedHVL >= policy.HVLBoundsOnly[SimContext::LOWER_BOUND]) &&
+		if((observedHVL >= policy.HVLBoundsOnly[SimContext::LOWER_BOUND]) &&
 		(observedHVL <= policy.HVLBoundsOnly[SimContext::UPPER_BOUND])) {
 			return SimContext::ART_FAIL_VIROLOGIC;
-	}
-
-	/** Evaluate the CD4 and HVL combined criteria */
-	if (patient->getMonitoringState()->hasObservedCD4 &&
-		(observedCD4 >= policy.CD4BoundsWithHVL[SimContext::LOWER_BOUND]) &&
-		(observedCD4 <= policy.CD4BoundsWithHVL[SimContext::UPPER_BOUND]) &&
-		patient->getMonitoringState()->hasObservedHVLStrata &&
-		(observedHVL >= policy.HVLBoundsWithCD4[SimContext::LOWER_BOUND]) &&
-		(observedHVL <= policy.HVLBoundsWithCD4[SimContext::UPPER_BOUND])) {
-			return SimContext::ART_FAIL_VIROLOGIC;
+		}
+		/** Evaluate the CD4 and HVL combined criteria */
+		if (patient->getMonitoringState()->hasObservedCD4){
+			double observedCD4 = patient->getMonitoringState()->currObservedCD4;
+			if((observedCD4 >= policy.CD4BoundsWithHVL[SimContext::LOWER_BOUND]) &&
+			(observedCD4 <= policy.CD4BoundsWithHVL[SimContext::UPPER_BOUND]) &&
+			patient->getMonitoringState()->hasObservedHVLStrata &&
+			(observedHVL >= policy.HVLBoundsWithCD4[SimContext::LOWER_BOUND]) &&
+			(observedHVL <= policy.HVLBoundsWithCD4[SimContext::UPPER_BOUND])) {
+				return SimContext::ART_FAIL_VIROLOGIC;
+			}
+		}
 	}
 
 	/** Evaluate the acute OIs since last ART only criteria */
@@ -1505,14 +1524,16 @@ SimContext::ART_FAIL_TYPE ClinicVisitUpdater::evaluateSTIEndpointPolicy() {
 		return SimContext::ART_FAIL_CLINICAL;
 
 	/** Evaluate the acute OIs in patient's history and CD4 count criteria */
-	if ((observedCD4 != SimContext::NOT_APPL) &&
-		(observedCD4 >= policy.CD4BoundsWithOIs[SimContext::LOWER_BOUND]) &&
+	if (patient->getMonitoringState()->hasObservedCD4){
+		double observedCD4 = patient->getMonitoringState()->currObservedCD4;
+		if((observedCD4 >= policy.CD4BoundsWithOIs[SimContext::LOWER_BOUND]) &&
 		(observedCD4 <= policy.CD4BoundsWithOIs[SimContext::UPPER_BOUND])) {
 			for (int i = 0; i < SimContext::OI_NUM; i++) {
 				if (policy.OIHistoryWithCD4[i] && (patient->getMonitoringState()->numObservedOIsTotal[i] > 0)) {
 					return SimContext::ART_FAIL_CLINICAL;
 				}
 			}
+		}
 	}
 
 	return SimContext::ART_FAIL_NOT_FAILED;
@@ -1525,19 +1546,21 @@ bool ClinicVisitUpdater::evaluateSTIRestartPolicy() {
 	int artLineNum = patient->getARTState()->nextRegimenNum;
 
 	/** Evaluate the CD4 only criteria */
-	double observedCD4 = patient->getMonitoringState()->currObservedCD4;
-	if (patient->getMonitoringState()->hasObservedCD4 &&
-		(observedCD4 >= simContext->getSTIInputs()->ARTRestartCD4Bounds[artLineNum][SimContext::LOWER_BOUND]) &&
+	if (patient->getMonitoringState()->hasObservedCD4){
+		double observedCD4 = patient->getMonitoringState()->currObservedCD4;
+		if((observedCD4 >= simContext->getSTIInputs()->ARTRestartCD4Bounds[artLineNum][SimContext::LOWER_BOUND]) &&
 		(observedCD4 <= simContext->getSTIInputs()->ARTRestartCD4Bounds[artLineNum][SimContext::UPPER_BOUND])) {
 			return true;
+		}
 	}
 
 	/** Evaluate the HVL strata only criteria */
-	SimContext::HVL_STRATA observedHVL = patient->getMonitoringState()->currObservedHVLStrata;
-	if (patient->getMonitoringState()->hasObservedHVLStrata &&
-		(observedHVL >= simContext->getSTIInputs()->ARTRestartHVLBounds[artLineNum][SimContext::LOWER_BOUND]) &&
+	if (patient->getMonitoringState()->hasObservedHVLStrata){
+		SimContext::HVL_STRATA observedHVL = patient->getMonitoringState()->currObservedHVLStrata;
+		if((observedHVL >= simContext->getSTIInputs()->ARTRestartHVLBounds[artLineNum][SimContext::LOWER_BOUND]) &&
 		(observedHVL <= simContext->getSTIInputs()->ARTRestartHVLBounds[artLineNum][SimContext::UPPER_BOUND])) {
 			return true;
+		}
 	}
 
 	return false;
@@ -1552,8 +1575,8 @@ bool ClinicVisitUpdater::evaluateSTISubsequentStopPolicy() {
 	int artLineNum = patient->getARTState()->nextRegimenNum;
 
 	/** Evaluate the CD4 only criteria */
-	double observedCD4 = patient->getMonitoringState()->currObservedCD4;
 	if (patient->getMonitoringState()->hasObservedCD4) {
+		double observedCD4 = patient->getMonitoringState()->currObservedCD4;
 		if ((simContext->getSTIInputs()->ARTRestopCD4Bounds[artLineNum][SimContext::UPPER_BOUND] != SimContext::NOT_APPL) &&
 			(observedCD4 > simContext->getSTIInputs()->ARTRestopCD4Bounds[artLineNum][SimContext::UPPER_BOUND])) {
 				return true;
@@ -1565,8 +1588,8 @@ bool ClinicVisitUpdater::evaluateSTISubsequentStopPolicy() {
 	}
 
 	/** Evaluate the HVL strata only criteria */
-	SimContext::HVL_STRATA observedHVL = patient->getMonitoringState()->currObservedHVLStrata;
 	if (patient->getMonitoringState()->hasObservedHVLStrata) {
+		SimContext::HVL_STRATA observedHVL = patient->getMonitoringState()->currObservedHVLStrata;
 		if ((simContext->getSTIInputs()->ARTRestopHVLBounds[artLineNum][SimContext::UPPER_BOUND] != SimContext::NOT_APPL) &&
 			(observedHVL > simContext->getSTIInputs()->ARTRestopHVLBounds[artLineNum][SimContext::UPPER_BOUND])) {
 				return true;

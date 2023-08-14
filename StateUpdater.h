@@ -79,7 +79,7 @@ protected:
 	/* setHIVIncReducMultiplier sets the current HIV incidence reduction multiplier if enabled */
 	void setHIVIncReducMultiplier(double reducMult);
 	/* setInfectedHIVState sets the patients to being HIV infected and updates statistics */
-	void setInfectedHIVState(SimContext::HIV_INF infectedState, bool isInitial, bool isHighRisk, bool resetTimeOfInfection);
+	void setInfectedHIVState(SimContext::HIV_INF infectedState, bool isInitial, bool resetTimeOfInfection, bool isHighRisk = true);
 	/* setInfectedPediatricsHIVState sets the pediatrics HIV state*/
 	void setInfectedPediatricsHIVState(SimContext::PEDS_HIV_STATE hivState, bool isInitial);
 	/* setMaternalHIVState sets the maternal state for pediatrics*/
@@ -283,6 +283,7 @@ protected:
 	void setProphToxicity(bool isMajor, SimContext::OI_TYPE oiType);
 	/* setProphResistance updates the flag to indicate that OI proph resistance has occurred */
 	void setProphResistance(SimContext::OI_TYPE oiType);
+	// TB-related
 	/* setTBDiseaseState updates the TB disease state */
 	void setTBDiseaseState(SimContext::TB_STATE newTBState, bool isInfection, SimContext::TB_INFECT infectType, SimContext::TB_STATE previousState);
 	/* setTBResistanceStrain updates the TB disease drug resistance */

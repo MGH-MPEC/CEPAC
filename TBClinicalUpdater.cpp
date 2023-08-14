@@ -57,7 +57,6 @@ void TBClinicalUpdater::performMonthlyUpdates() {
 	if (!simContext->getTBInputs()->enableTB)
 		return;
 
-	checkForStoppingEmpiricTherapy();
 	if (simContext->getTBInputs()->allowMultipleTests){
 		bool continueTesting = true;
 
@@ -67,6 +66,7 @@ void TBClinicalUpdater::performMonthlyUpdates() {
 	}
 	else
 		performTBTestingUpdates();
+	checkForStoppingEmpiricTherapy();
 	performTBTreatmentUpdates();
 	performTBLTFUUpdates();
 	checkForTreatmentDefault();
@@ -338,7 +338,7 @@ void TBClinicalUpdater::checkForStoppingEmpiricTherapy(){
 			bool isSuccess = patient->getTBState()->empiricTreatmentSuccess;
 
 			SimContext::TB_STATE tbState = patient->getTBState()->currTrueTBDiseaseState;
-			//As with TB proph, patients who complete a full duration on treatment in the Latent state transition to the Uninfected TB state. They are still flagged as having a history of TB
+			//Patients who complete a full duration on treatment in the Latent state transition to the Uninfected TB state. They are still flagged as having a history of TB. Note that this does not occur with TB prophyalxis, only with TB treatment (regular or empiric).
 			if(tbState == SimContext::TB_STATE_LATENT && patient->getTBState()->monthOfTBStateChange <= patient->getTBState()->monthOfEmpiricTreatmentStart){
 				setTBDiseaseState(SimContext::TB_STATE_UNINFECTED, false, SimContext::TB_INFECT_INITIAL, tbState);
 			}
@@ -400,7 +400,7 @@ void TBClinicalUpdater::checkPendingDSTResults() {
 		if(patient->getTBState()->careState == SimContext::TB_CARE_IN_CARE){
 			if(newObsvStrain != prevObsvStrain){
 				//If patient is scheduled for regular treatment or already on treatment, update line if necessary
-				int lineNum = 0;
+				int lineNum = SimContext::TB_NUM_TREATMENTS - 1;
 				double randNum = CepacUtil::getRandomDouble(60195, patient);
 				bool treathist = patient->getTBState()->everOnTreatmentOrEmpiric;
 				for (int i = 0; i < SimContext::TB_NUM_TREATMENTS; i++) {
@@ -463,7 +463,7 @@ void TBClinicalUpdater::performTBTreatmentUpdates() {
 	if (patient->getTBState()->hasObservedTBResistanceStrain)
 		obsvStrain = patient->getTBState()->currObservedTBResistanceStrain;
 		// Roll for initial line
-		int lineNum = 0;
+		int lineNum = SimContext::TB_NUM_TREATMENTS - 1;
 		double randNum = CepacUtil::getRandomDouble(60190, patient);
 		bool treathist = patient->getTBState()->everOnTreatmentOrEmpiric;
 		for (int i = 0; i < SimContext::TB_NUM_TREATMENTS; i++) {
@@ -496,7 +496,7 @@ void TBClinicalUpdater::performTBTreatmentUpdates() {
 			bool isSuccess = patient->getTBState()->treatmentSuccess;
 
 			SimContext::TB_STATE tbState = patient->getTBState()->currTrueTBDiseaseState;
-			//As with TB proph, patients who complete a full duration on treatment in the Latent state transition to the Uninfected TB state. They are still flagged as having a history of TB
+			//Patients who complete a full duration on treatment in the Latent state transition to the Uninfected TB state. They are still flagged as having a history of TB. Note that this does not occur with TB prophyalxis, only with TB treatment (regular or empiric).
 			if(tbState == SimContext::TB_STATE_LATENT && patient->getTBState()->monthOfTBStateChange <= patient->getTBState()->monthOfTreatmentStart){
 				setTBDiseaseState(SimContext::TB_STATE_UNINFECTED, false, SimContext::TB_INFECT_INITIAL, tbState);
 			}
@@ -798,23 +798,34 @@ bool TBClinicalUpdater::evaluateStartTBDiagnostics(){
 	bool hasPassedOneCriteria = false;
 	bool hasFailedOneCriteria = false;
 
+	if(patient->getTBState()->isOnEmpiricTreatment){
+		return false;
+	}
+
+	// Check criteria based on TB symptoms first because these can override the post-treatment waiting period
+	if (simContext->getTBInputs()->TBDiagnosticsInitPolicies[SimContext::TB_DIAG_INIT_SYMPTOMS]){
+		if (patient->getTBState()->currTrueTBTracker[SimContext::TB_TRACKER_SYMPTOMS]){
+			double randNum = CepacUtil::getRandomDouble(80060, patient);
+			if (randNum < simContext->getTBInputs()->TBDiagnosticsInitSymptomsProb){
+				hasPassedOneCriteria = true;
+			}	
+			else{
+				hasFailedOneCriteria = true;
+			}	
+		}
+		else{
+				hasFailedOneCriteria = true;
+		}
+	}		
+	// TB Symptoms criteria are the only ones which are checked during the post-treatment diagnostics hiatus
+	if(patient->getTBState()->hasStoppedTreatmentOrEmpiric && (patient->getGeneralState()->monthNum - patient->getTBState()->monthOfTreatmentOrEmpiricStop) < simContext->getTBInputs()->TBDiagnosticsInitMinMthsPostTreat){
+		return hasPassedOneCriteria;
+	}
+
 	//Upon HIV Diagnosis
 	if (simContext->getTBInputs()->TBDiagnosticsInitPolicies[SimContext::TB_DIAG_INIT_HIV]){
 		if (patient->getMonitoringState()->isDetectedHIVPositive && patient->getMonitoringState()->monthOfDetection == patient->getGeneralState()->monthNum)
 			hasPassedOneCriteria = true;
-		else
-			hasFailedOneCriteria = true;
-	}
-
-	//With symptoms
-	if (simContext->getTBInputs()->TBDiagnosticsInitPolicies[SimContext::TB_DIAG_INIT_SYMPTOMS]){
-		if (patient->getTBState()->currTrueTBTracker[SimContext::TB_TRACKER_SYMPTOMS]){
-			double randNum = CepacUtil::getRandomDouble(80060, patient);
-			if (randNum < simContext->getTBInputs()->TBDiagnosticsInitSymptomsProb)
-				hasPassedOneCriteria = true;
-			else
-				hasFailedOneCriteria = true;
-		}
 		else
 			hasFailedOneCriteria = true;
 	}

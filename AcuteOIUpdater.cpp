@@ -35,7 +35,7 @@ void AcuteOIUpdater::performInitialUpdates() {
 
 		/** Update the HIV state to symptomatic if there is a history of OIs */
 		if (patient->getDiseaseState()->typeTrueOIHistory != SimContext::HIST_EXT_N) {
-			setInfectedHIVState(SimContext::HIV_INF_SYMP_CHR_POS, true, false, true);
+			setInfectedHIVState(SimContext::HIV_INF_SYMP_CHR_POS, true, true);
 		}
 	}
 	else {
@@ -59,7 +59,7 @@ void AcuteOIUpdater::performMonthlyUpdates() {
 	/** Update state for the occurrence of the OI */
 	setCurrTrueOI(oiType);
 	if (patient->getDiseaseState()->infectedHIVState == SimContext::HIV_INF_ASYMP_CHR_POS)
-		setInfectedHIVState(SimContext::HIV_INF_SYMP_CHR_POS, false, false, false);
+		setInfectedHIVState(SimContext::HIV_INF_SYMP_CHR_POS, false, false);
 	
 	// Add the risk of mortality from an acute severe OI if applicable
 	if(simContext->getRunSpecsInputs()->severeOIs[oiType]){

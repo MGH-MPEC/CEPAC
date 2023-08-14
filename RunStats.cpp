@@ -517,6 +517,7 @@ void RunStats::initOIStats() {
 			oiStats.numDetectedOIsCD4OI[i][j] = 0;
 		}
 	}
+	oiStats.numOIEventsTotal = 0;
 	for (int i = 0; i < SimContext::HVL_NUM_STRATA; i++) {
 		oiStats.numPatientsHVL[i] = 0;
 		oiStats.numMonthsHVL[i] = 0;
@@ -1149,8 +1150,12 @@ void RunStats::initTimeSummary(TimeSummary *currTime, bool isDynamic) {
 	}		
 
 	for (int i = 0; i < SimContext::TB_NUM_TREATMENTS; i++){
-		currTime->numOnTBTreatment[i] = 0;
-		currTime->numOnEmpiricTBTreatment[i] = 0;
+		currTime->numOnTBTreatmentTotal[i] = 0;
+		currTime->numOnEmpiricTBTreatmentTotal[i] = 0;
+		for (int j = 0; j < SimContext::TB_NUM_STATES; j++){
+			currTime->numOnTBTreatmentByState[j][i] = 0;
+			currTime->numOnEmpiricTBTreatmentByState[j][i] = 0;
+		}
 	}
 
 	for (int i = 0; i < SimContext::TB_NUM_STRAINS; i++)
@@ -1542,6 +1547,9 @@ void RunStats::initTimeSummary(TimeSummary *currTime, bool isDynamic) {
 		currTime->numARTEfficacyState[i] = 0;
 	}
 	currTime->numWithoutOIHistory = 0;
+	currTime->numPrimaryOIsTotal = 0;
+	currTime->numSecondaryOIsTotal = 0;
+	currTime->numOIsTotal = 0;
 	for (int i = 0; i < SimContext::OI_NUM; i++) {
 		currTime->numPrimaryOIs[i] = 0;
 		currTime->numSecondaryOIs[i] = 0;
@@ -1906,7 +1914,7 @@ void RunStats::finalizeSurvivalStats() {
 			devLMMedian = (devLMMedian < 0.0) ? -devLMMedian : devLMMedian;
 			survivalStats[j].LMsSumDeviationMedian += devLMMedian;
 			double devLM = currPatient.LMs - survivalStats[j].LMsMean;
-			survivalStats[j].LMsSumDeviation += (devLM < 0.0) ? -devLM : devLM;;
+			survivalStats[j].LMsSumDeviation += (devLM < 0.0) ? -devLM : devLM;
 			double devLMAccum = devLM * devLM;
 			survivalStats[j].LMsSumDeviationSquares += devLMAccum;
 			devLMAccum *= devLM;
@@ -1965,6 +1973,7 @@ void RunStats::finalizeOIStats() {
 			oiStats.numDetectedOIsCD4[j] += oiStats.numDetectedOIsCD4OI[j][i];
 			oiStats.numDetectedOIsOI[i] += oiStats.numDetectedOIsCD4OI[j][i];
 		}
+		oiStats.numOIEventsTotal += (oiStats.numPrimaryOIsOI[i] + oiStats.numSecondaryOIsOI[i]);
 	}
 
 	/** Accumulate the OI history numbers */
@@ -3096,7 +3105,7 @@ void RunStats::writeOIStats() {
 	fprintf(statsFile,"\n\t# Secondary OIs");
 	for (i = 0; i < SimContext::OI_NUM; ++i)
 		fprintf(statsFile," \t%1lu", oiStats.numSecondaryOIsOI[i]);
-
+	fprintf(statsFile, "\t\t# OIs Total\t%1lu", oiStats.numOIEventsTotal);
 	// Write out number of primary, secondary, and detected OIs
 	fprintf(statsFile,"\n\tPrimary OIs");
 	for (i = 0; i < SimContext::OI_NUM; ++i)
@@ -3115,8 +3124,8 @@ void RunStats::writeOIStats() {
 	for (j = SimContext::CD4_NUM_STRATA - 1; j >= 0; --j) {
 		fprintf(statsFile,"\n\t%s", SimContext::CD4_STRATA_STRS[j]);
 		for (i = 0; i < SimContext::OI_NUM; ++i)
-			fprintf(statsFile," \t%1lu", oiStats.numSecondaryOIsCD4OI[j][i]);
-		fprintf(statsFile," \t%1lu", oiStats.numSecondaryOIsCD4[j]);
+			fprintf(statsFile,"\t%1lu", oiStats.numSecondaryOIsCD4OI[j][i]);
+		fprintf(statsFile,"\t%1lu", oiStats.numSecondaryOIsCD4[j]);
 	}
 	fprintf(statsFile,"\n\tDetected OIs");
 	for (i = 0; i < SimContext::OI_NUM; ++i)
@@ -4707,16 +4716,33 @@ void RunStats::writeTimeSummaries() {
 					fprintf(statsFile, "\t%lu", currTime->numCompletedTBProph[k][j]);
 			}
 					
+			fprintf(statsFile,"\n\tNum On TB Treatment");
 			fprintf(statsFile,"\n\t");
 			for (j = 0; j < SimContext::TB_NUM_TREATMENTS; j++)
 				fprintf(statsFile, "\tTreatment %d", j);
-			fprintf(statsFile,"\n\tNum On TB Treatment");
+			for(int i = 0; i < SimContext::TB_NUM_STATES; i++){
+				fprintf(statsFile,"\n\t%s", SimContext::TB_STATE_STRS[i]);
+				for (j = 0; j < SimContext::TB_NUM_TREATMENTS; j++){
+					fprintf(statsFile, "\t%lu", currTime->numOnTBTreatmentByState[i][j]);
+				}
+			}	
+			fprintf(statsFile, "\n\tTotal");	
 			for (j = 0; j < SimContext::TB_NUM_TREATMENTS; j++)
-				fprintf(statsFile, "\t%lu", currTime->numOnTBTreatment[j]);
+				fprintf(statsFile, "\t%lu", currTime->numOnTBTreatmentTotal[j]);
 			fprintf(statsFile,"\n\tNum On Empiric TB Treatment");
+			fprintf(statsFile,"\n\t");
 			for (j = 0; j < SimContext::TB_NUM_TREATMENTS; j++)
-				fprintf(statsFile, "\t%lu", currTime->numOnEmpiricTBTreatment[j]);
+				fprintf(statsFile, "\tTreatment %d", j);
 
+			for(int i = 0; i < SimContext::TB_NUM_STATES; i++){
+				fprintf(statsFile,"\n\t%s", SimContext::TB_STATE_STRS[i]);
+				for (j = 0; j < SimContext::TB_NUM_TREATMENTS; j++){
+					fprintf(statsFile, "\t%lu", currTime->numOnEmpiricTBTreatmentByState[i][j]);
+				}
+			}	
+			fprintf(statsFile,"\n\tTotal");
+			for (j = 0; j < SimContext::TB_NUM_TREATMENTS; j++)
+				fprintf(statsFile, "\t%lu", currTime->numOnEmpiricTBTreatmentTotal[j]);
 			fprintf(statsFile,"\n\t");
 			for (j = 0; j < SimContext::TB_NUM_STRAINS; j++)
 				fprintf(statsFile, "\t%s", SimContext::TB_STRAIN_STRS[j]);
@@ -4876,28 +4902,13 @@ void RunStats::writeTimeSummaries() {
 			fprintf(statsFile,"\n\tTB Deaths (All)");
 			fprintf(statsFile, "\t%lu", currTime->numDeathsTB);
 
-			fprintf(statsFile,"\n\tTB Deaths (Pulm)");
+			fprintf(statsFile,"\n\t\tPulm TB Deaths\tExtrapulm TB Deaths\tTB Deaths While TB LTFU");
 			fprintf(statsFile, "\n\tHIV Negative");
-			fprintf(statsFile, "\t%lu", currTime->numDeathsTBPulmHIVNegative);
+			fprintf(statsFile, "\t%lu\t%lu\t%lu", 
+				currTime->numDeathsTBPulmHIVNegative,currTime->numDeathsTBExtraPulmHIVNegative, currTime->numDeathsTBLTFUHIVNegative);
 			for (k = 0; k < SimContext::CD4_NUM_STRATA; k++){
 				fprintf(statsFile, "\n\t%s", SimContext::CD4_STRATA_STRS[k]);
-				fprintf(statsFile, "\t%lu", currTime->numDeathsTBPulmHIVPositive[k]);
-			}
-
-			fprintf(statsFile,"\n\tTB Deaths (Extrapulm)");
-			fprintf(statsFile, "\n\tHIV Negative");
-			fprintf(statsFile, "\t%lu", currTime->numDeathsTBExtraPulmHIVNegative);
-			for (k = 0; k < SimContext::CD4_NUM_STRATA; k++){
-				fprintf(statsFile, "\n\t%s", SimContext::CD4_STRATA_STRS[k]);
-				fprintf(statsFile, "\t%lu", currTime->numDeathsTBExtraPulmHIVPositive[k]);
-			}
-
-			fprintf(statsFile,"\n\tTB Deaths While TB LTFU");
-			fprintf(statsFile, "\n\tHIV Negative");
-			fprintf(statsFile, "\t%lu", currTime->numDeathsTBLTFUHIVNegative);
-			for (k = 0; k < SimContext::CD4_NUM_STRATA; k++){
-				fprintf(statsFile, "\n\t%s", SimContext::CD4_STRATA_STRS[k]);
-				fprintf(statsFile, "\t%lu", currTime->numDeathsTBLTFUHIVPositive[k]);
+				fprintf(statsFile, "\t%lu\t%lu\t%lu", currTime->numDeathsTBPulmHIVPositive[k], currTime->numDeathsTBExtraPulmHIVPositive[k], currTime->numDeathsTBLTFUHIVPositive[k]);
 			}
 
 			fprintf(statsFile,"\n\tAll Cause Deaths while on failed TB Treatment");
@@ -4913,18 +4924,23 @@ void RunStats::writeTimeSummaries() {
 		fprintf(statsFile,"\n\n\tOIs Distrib");
 		for ( j = 0; j < SimContext::OI_NUM; ++j )
 			fprintf(statsFile," \t%s", SimContext::OI_STRS[j]);
+		fprintf(statsFile, "\tTotal");
 		if (runSpecs->longitLoggingLevel == SimContext::LONGIT_SUMM_MTH_BRF) {
 			fprintf(statsFile,"\n\tTot OI evts:");
 			for ( j = 0; j < SimContext::OI_NUM; ++j )
 				fprintf(statsFile," \t%1lu", currTime->numPrimaryOIs[j] + currTime->numSecondaryOIs[j]);
+			fprintf(statsFile,"\t%1lu", currTime->numOIsTotal);
 		}
 		else {
 			fprintf(statsFile,"\n\tPrim OI evts:");
 			for ( j = 0; j < SimContext::OI_NUM; ++j )
 				fprintf(statsFile," \t%1lu", currTime->numPrimaryOIs[j]);
+			fprintf(statsFile,"\t%1lu", currTime->numPrimaryOIsTotal);
 			fprintf(statsFile,"\n\tSec OI evts:");
 			for ( j = 0; j < SimContext::OI_NUM; ++j )
 				fprintf(statsFile," \t%1lu", currTime->numSecondaryOIs[j]);
+			fprintf(statsFile,"\t%1lu", currTime->numSecondaryOIsTotal);
+			fprintf(statsFile,"\t# Tot OI evts:\t%1lu", currTime->numOIsTotal);
 		}
 
 		// output #patients with OI hists (is cumulative), and # w/o hist of any OI

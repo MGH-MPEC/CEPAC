@@ -611,6 +611,8 @@ public:
 		int numDetectedOIsCD4[SimContext::CD4_NUM_STRATA];
 		/** Detected OI count stratified by OI type and CD4 strata */
 		int numDetectedOIsCD4OI[SimContext::CD4_NUM_STRATA][SimContext::OI_NUM];
+		/** Total OI events across the whole run */
+		int numOIEventsTotal;
 		// OI history logging - number of patients and calculated probabilities of having OI history
 		//	stratified by OI x HVL, OI x CD4, and OI x HVL x CD4
 		/** Total number of patients stratified by viral load (used for calculating averages) */
@@ -1278,9 +1280,9 @@ public:
 		/** num deaths on ART stratified by CD4 metric*/
 		int numARTDeathCauseCD4Metric[SimContext::ART_NUM_LINES][SimContext::DTH_NUM_CAUSES][SimContext::PEDS_CD4_AGE_CAT_NUM];
 		/** Total true CD4 at death on ART, stratified by ART line, cause of death and CD4 metric */
-		double trueCD4AtARTDeathCauseSum[SimContext::ART_NUM_LINES][SimContext::DTH_NUM_CAUSES][SimContext::PEDS_CD4_AGE_CAT_NUM];;
+		double trueCD4AtARTDeathCauseSum[SimContext::ART_NUM_LINES][SimContext::DTH_NUM_CAUSES][SimContext::PEDS_CD4_AGE_CAT_NUM];
 		/** Average true CD4 at death on ART, stratified by ART line, cause of death and CD4 metric */
-		double trueCD4AtARTDeathCauseMean[SimContext::ART_NUM_LINES][SimContext::DTH_NUM_CAUSES][SimContext::PEDS_CD4_AGE_CAT_NUM];;
+		double trueCD4AtARTDeathCauseMean[SimContext::ART_NUM_LINES][SimContext::DTH_NUM_CAUSES][SimContext::PEDS_CD4_AGE_CAT_NUM];
 		/** Total observed CD4 at death on ART, stratified by ART line and cause of death*/
 		double observedCD4AtARTDeathCauseSum[SimContext::ART_NUM_LINES][SimContext::DTH_NUM_CAUSES];
 		/** Number of HIV+ patients with observed CD4 at death on ART, stratified by ART line and cause of death*/
@@ -1394,10 +1396,14 @@ public:
 		int numTBProphMinorTox[SimContext::TB_NUM_PROPHS];
 		/** number who had major toxicity on each TB proph line this month */
 		int numTBProphMajorTox[SimContext::TB_NUM_PROPHS];
+		/** number on TB Treatment by true TB state and treat line*/
+		int numOnTBTreatmentByState[SimContext::TB_NUM_STATES][SimContext::TB_NUM_TREATMENTS];
+		/** number on Empiric Tb Treatment by true TB state and treat line*/
+		int numOnEmpiricTBTreatmentByState[SimContext::TB_NUM_STATES][SimContext::TB_NUM_TREATMENTS];
 		/** number on TB Treatment by treat line*/
-		int numOnTBTreatment[SimContext::TB_NUM_TREATMENTS];
+		int numOnTBTreatmentTotal[SimContext::TB_NUM_TREATMENTS];
 		/** number on Empiric Tb Treatment by treat line*/
-		int numOnEmpiricTBTreatment[SimContext::TB_NUM_TREATMENTS];
+		int numOnEmpiricTBTreatmentTotal[SimContext::TB_NUM_TREATMENTS];
 		/** number infected with TB stratified by TB Strain*/
 		int numTBStrain[SimContext::TB_NUM_STRAINS];
 		/** number hiv + with TB tracker stratified by tracker and cd4 */
@@ -1726,6 +1732,12 @@ public:
 		int numPrimaryOIs[SimContext::OI_NUM];
 		/** number with secondary OIs, stratified by OI type */
 		int numSecondaryOIs[SimContext::OI_NUM];
+		/** total across all OI types of primary OI incidence */
+		int numPrimaryOIsTotal;
+		/** total across all OI types of secondary OI incidence */
+		int numSecondaryOIsTotal;
+		/** total primary + secondary events across all OI types */
+		int numOIsTotal;
 		/** number with OI history by type */
 		int numWithOIHistory[SimContext::OI_NUM];
 		/** number without any OI history - includes HIVneg  */
