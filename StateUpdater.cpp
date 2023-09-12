@@ -3425,10 +3425,14 @@ bool StateUpdater::performTBTest(int testNum, bool performDST){
 
 		randNum = CepacUtil::getRandomDouble(100150, patient);
 		SimContext::TB_DIAG_STATUS result;
-		if (randNum < probPositive)
+		if (randNum < probPositive){
 			result = SimContext::TB_DIAG_STATUS_POS;
-		else
+		}
+		//DST is only performed if TB is detected 
+		else{
 			result = SimContext::TB_DIAG_STATUS_NEG;
+			performDST = false;
+		}	
 
 		// Update the longitudinal statistics for the result of the test
 		RunStats::TimeSummary *currTime = getTimeSummaryForUpdate();
@@ -3464,7 +3468,7 @@ bool StateUpdater::performTBTest(int testNum, bool performDST){
 
 		//Roll for DST if enabled
 		//Only do DST if we have no pending DST results
-		//Only do DST here if it is linked to the test
+		//Only do DST here if it is linked to the test (meaning it is performed automatically on the same sample if TB was detected)
 		if (performDST && tbTest.DSTLinked && !patient->tbState.hasPendingDSTResult){
 			//Add costs DST test
 			incrementCostsTBTest(0.0, tbTest.DSTCost, testNum);
