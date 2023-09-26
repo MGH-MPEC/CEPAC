@@ -3076,8 +3076,6 @@ void SimContext::readTBInputs() {
 	readAndSkipPast( "TBTreatProbResistAfterDefault", file );
 	for (i = 0; i < TB_NUM_TREATMENTS; i++)
 		fscanf( file, "%lf", &(tbInputs.TBTreatmentProbResistAfterDefault[i]));
-	readAndSkipPast( "TBTreatLagToTreat", file );
-	fscanf( file, "%lf %lf", &(tbInputs.monthsToTreatmentMean), &(tbInputs.monthsToTreatmentStdDev));
 
 	readAndSkipPast( "TBTreatProbEmpiricMDR", file );
 	fscanf( file, "%lf", &(tbInputs.probEmpiricWithObservedHistMDR));

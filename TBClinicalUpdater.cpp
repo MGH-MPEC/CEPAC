@@ -473,15 +473,8 @@ void TBClinicalUpdater::performTBTreatmentUpdates() {
 			}
 			randNum -= simContext->getTBInputs()->TBTreatmentProbInitialLine[treathist][obsvStrain][i];
 		}
-		//determine lag to treatment start
-		double timeLagMean = simContext->getTBInputs()->monthsToTreatmentMean;
-		double timeLagStdDev = simContext->getTBInputs()->monthsToTreatmentStdDev;
-		int timeLag = (int) (CepacUtil::getRandomGaussian(timeLagMean, timeLagStdDev, 60200, patient) + 0.5);
-		if (timeLag < 0)
-			timeLag = 0;
-
-		//Schedule initial treatment
-		scheduleNextTBTreatment(lineNum, patient->getGeneralState()->monthNum + timeLag);
+			//Schedule initial treatment for later this month
+			scheduleNextTBTreatment(lineNum, patient->getGeneralState()->monthNum);
 	}
 	}
 	// Evaluate treatment changes if on treatment and the intended duration has been exceeded

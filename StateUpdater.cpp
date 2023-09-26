@@ -4112,7 +4112,7 @@ void StateUpdater::transitionEmpiricToRealTreatment(){
 } /* end transitionEmpiricToRealTreatment */
 
 
-/** \brief scheduleNextTBTreatment updates the patients next scheduled TB treatment and lag time to start
+/** \brief scheduleNextTBTreatment updates the patients next scheduled TB treatment after events such as TB RTC and returning DST results 
  *
  * \param treatNum a int indicating the next treatment line the patient should go on
  * \param monthStart an integer indicating which month the next treatment should start
@@ -4140,7 +4140,7 @@ void StateUpdater::scheduleNextTBTreatment(int treatNum, int monthStart, bool is
 /** \brief unscheduleNextTBTreatment removes the next scheduled start of TB treatment */
 void StateUpdater::unscheduleNextTBTreatment() {
 	patient->tbState.isScheduledForTreatment = false;
-} /* end unscheduleNextTBTreatmet */
+} /* end unscheduleNextTBTreatment */
 
 
 /** \brief increaseTBDrugResistance updates that patient state and stats for an increase in TB drug resistance
@@ -4209,9 +4209,8 @@ void StateUpdater::setTBLTFU() {
 	patient->tbState.careState = SimContext::TB_CARE_LTFU;
 	patient->tbState.monthOfLTFU = patient->generalState.monthNum;
 	patient->tbState.willTreatmentDefault = false;
-	//Unschedule any tb treatments
-	if (patient->tbState.isScheduledForTreatment)
-		unscheduleNextTBTreatment();
+	//Now that there is no longer an input for lag to treatment start, people should not be scheduled for TB treatment when they go TB LTFU 
+	assert(!patient->tbState.isScheduledForTreatment);
 	//Stop the current treatment regimen if any
 	if (patient->tbState.isOnTreatment){
 		SimContext::TB_STATE tbState = patient->tbState.currTrueTBDiseaseState;
@@ -4431,6 +4430,9 @@ void StateUpdater::setTBSelfCure(bool isSelfCured){
 	//stop tb treatment if any
 	if (patient->tbState.isOnTreatment)
 		stopCurrTBTreatment(true, true);
+	//Unschedule TB treatment if scheduled (for instance, if they just returned to care at a non-integrated clinic last month)
+	if (patient->tbState.isScheduledForTreatment)
+		unscheduleNextTBTreatment();
 	//Unschedule any prophs and stop current prophs
 	if (patient->tbState.isScheduledForProph)
 		unscheduleNextTBProph();

@@ -1557,8 +1557,6 @@ public:
 		int TBTreatmentMaxRepeats[TB_NUM_TREATMENTS];
 		double TBTreatmentProbResistAfterFail[TB_NUM_TREATMENTS];
 		double TBTreatmentProbResistAfterDefault[TB_NUM_TREATMENTS];
-		double monthsToTreatmentMean;
-		double monthsToTreatmentStdDev;
 		double probEmpiricWithObservedHistMDR;
 		double probEmpiricWithObservedHistXDR;
 		int empiricTreatmentNum[TB_NUM_STRAINS];
