@@ -15,7 +15,7 @@ const char *CepacUtil::CEPAC_INPUT_VERSION = "20210615";
 /** CEPAC version string: the version label commonly used in CEPAC vernacular */
 const char *CepacUtil::CEPAC_VERSION_STRING = "50d";
 /** The compile date of the most recent release */
-const char *CepacUtil::CEPAC_EXECUTABLE_COMPILED_DATE = "2023-09-21";
+const char *CepacUtil::CEPAC_EXECUTABLE_COMPILED_DATE = "2023-09-26";
 /** .tmp */
 const char *CepacUtil::FILE_EXTENSION_FOR_TEMP = ".tmp";
 /** .txt */

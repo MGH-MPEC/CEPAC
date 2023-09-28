@@ -27,7 +27,7 @@ SimContext::~SimContext(void) {
 }
 
 /* Initialize the number of patients to trace*/
-int SimContext::numPatientsToTrace;
+int SimContext::numPatientsToTrace = MAX_NUM_TRACES;
 
 /* Initialize the constant character strings */
 const char *SimContext::CD4_STRATA_STRS[] = {
@@ -348,7 +348,7 @@ void SimContext::readOutputInputs() {
 
 	readAndSkipPast("NumPatientsToTrace", inputFile);
 	fscanf(inputFile, "%d", &(outputInputs.traceNumSelection));
-	numPatientsToTrace = min(outputInputs.traceNumSelection, MAX_NUM_TRACES);
+	numPatientsToTrace = min(outputInputs.traceNumSelection, numPatientsToTrace);
 	//read in sub cohort parameters
 	readAndSkipPast("EnableSubCohorts", inputFile);
 	fscanf(inputFile, "%d", &tempBool);
@@ -3942,8 +3942,7 @@ void SimContext::readPedsInputs() {
 	
 	// read in the death rate ratios for the generic risk factors for all Peds age categories
 	for (i = 0; i<RISK_FACT_NUM; i++){
-		sprintf(scratch, RISK_FACT_STRS[i]);
-		readAndSkipPast2( "GenRiskDthRateRatio_Peds", scratch, inputFile );
+		readAndSkipPast2( "GenRiskDthRateRatio_Peds", RISK_FACT_STRS[i], inputFile );
 		for(j = 0;j<PEDS_AGE_CHILD_NUM;j++){
 			fscanf( inputFile, "%lf", &pedsInputs.genericRiskDeathRateRatio[i][j]);
 		}
@@ -5434,8 +5433,7 @@ void SimContext::readAdolescentInputs() {
 			fscanf( inputFile, "%lf", &adolescentInputs.ARTDeathRateRatio[i]);
 	//Death rate ratios for generic risk factors 
 	for (i = 0; i<RISK_FACT_NUM; i++){
-		sprintf(tmpBuf, RISK_FACT_STRS[i]);
-		readAndSkipPast2( "GenRiskDthRateRatio_Adolescent", tmpBuf, inputFile );
+		readAndSkipPast2( "GenRiskDthRateRatio_Adolescent",RISK_FACT_STRS[i], inputFile );
 		for(j = 0;j<ADOLESCENT_NUM_AGES;j++){
 			fscanf( inputFile, "%lf", &adolescentInputs.genericRiskDeathRateRatio[i][j]);
 		}	
