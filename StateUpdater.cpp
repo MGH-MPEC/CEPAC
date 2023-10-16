@@ -2257,6 +2257,7 @@ void StateUpdater::startNextARTRegimen(bool isResupp) {
 		patient->artState.hasTakenART = true;
 		patient->artState.monthFirstStartART = patient->generalState.monthNum;
 	}
+	// ART initiation statistics are only set once the efficacy is determined
 	if (!patient->artState.hasTakenARTRegimen[patient->artState.currRegimenNum]){
 		int artLineNum = patient->artState.currRegimenNum;
 		runStats->artStats.numARTEverInit[artLineNum]++;
@@ -2279,7 +2280,6 @@ void StateUpdater::startNextARTRegimen(bool isResupp) {
 
 		patient->artState.hasTakenARTRegimen[patient->artState.currRegimenNum] = true;
 	}
-	// ART initiation statistics are only set once the efficacy is determined
 } /* end startNextARTRegimen */
 
 /** \brief startNextARTSubRegimen updates the state to begin the next ART treatment subregimen
@@ -3518,7 +3518,7 @@ bool StateUpdater::performTBTest(int testNum, bool performDST){
 			continueLoop = false;
 		}
 
-		//Reset tests if allow no diagnosis
+		//Reset tests if allow no diagnosis - includes clearing pending DST since they are not completing the full testing algorithm
 		if(simContext->getTBInputs()->TBDiagnosticAllowNoDiagnosis){
 			resetTBTesting(false);
 		}
@@ -3644,11 +3644,11 @@ void StateUpdater::performTBDiagnosis(int currIndex, bool atInit){
 			else
 				probLink = simContext->getTBInputs()->probLinkTBTreatmentNonIntegrated;
 			if (randNum < probLink){
-					willLink = true;
-				}
-				//reset tests
-				resetTBTesting(false, false);
-		}	
+				willLink = true;
+			}
+			//reset tests - pending DST results may still be returned (and potentially used to update treatment if they linked) but otherwise they have completed the algorithm
+			resetTBTesting(false, false);
+		}
 		else{
 			// Past positive TB diagnoses can be cleared if no changes in state have occurred since self-cure
 			if(patient->tbState.isSelfCured){
@@ -3657,8 +3657,9 @@ void StateUpdater::performTBDiagnosis(int currIndex, bool atInit){
 			if (patient->generalState.tracingEnabled) {
 				tracer->printTrace(1, "**%d TB TESTING FINISHED TB NOT DETECTED\n", patient->generalState.monthNum);
 			}
-			//reset tests and return - nothing more to do since they don't have TB
+			//reset tests - pending DST results may still be returned but otherwise they have completed the algorithm
 			resetTBTesting(false, false);
+			// return - nothing more to do since they were not diagnosed with TB
 			return;
 		}
 	}	
@@ -3949,8 +3950,8 @@ void StateUpdater::startNextTBTreatment() {
 
 /** \brief stopCurrTBTreatment updates the patient state and statistics to stop the current TB treatment
  *
- * \param isFinished a boolean that is false if the patient dropped out of treatment before it finished
- * \param isCured a boolean that is true if the patient was cured while on treatment
+ * \param isFinished a boolean that is false if they stopped treatment early
+ * \param isCured a boolean that is true if the patient was cured while on treatment (i.e., transitioned to Uninfected or Previously Treated at the time they stopped)
  **/
 void StateUpdater::stopCurrTBTreatment(bool isFinished, bool isCured) {
 	// Output tracing if enabled
@@ -3976,15 +3977,17 @@ void StateUpdater::stopCurrTBTreatment(bool isFinished, bool isCured) {
 	if (isFinished) {
 		patient->tbState.everCompletedTreatmentOrEmpiric = true;
 		runStats->tbStats.numFinishTreatment[obsvStrain][treatNum]++;
-		if (isCured)
-			runStats->tbStats.numCuredAtTreatmentFinish[obsvStrain][treatNum]++;
+		if (isCured){
+			runStats->tbStats.numCuredAtTreatmentFinish[patient->tbState.currTrueTBResistanceStrain][treatNum]++;
+		}	
 	}
-	else {
+	// Only those who stop due to LTFU are counted as "dropping out"
+	else if (patient->tbState.hasIncompleteTreatment){
 		runStats->tbStats.numDropoutTreatment[obsvStrain][treatNum]++;
 
 		RunStats::TimeSummary *currTime = getTimeSummaryForUpdate();
 		if (currTime) {
-			currTime->numDropoutTreatment[obsvStrain][treatNum]++;
+			currTime->numDropoutTBTreatment[obsvStrain][treatNum]++;
 		}
 	}
 } /* end stopCurrTBTreatment */
@@ -4067,9 +4070,10 @@ void StateUpdater::startEmpiricTBTreatment(int treatNum, int previousDuration) {
 
 /** \brief stopEmpiricTBTreatment updates the patient state and statistics to stop empiric TB treatment
  * \param isFinished a bool defaulting to false indicating whether they have completed the full duration on empiric TB treatment 
+ * \param isCured a bool defaulting to false indicating whether they made a transition to Uninfected or Previously Treated upon stopping empiric treatment 
  *
  **/
-void StateUpdater::stopEmpiricTBTreatment(bool isFinished) {
+void StateUpdater::stopEmpiricTBTreatment(bool isFinished, bool isCured) {
 	if (patient->generalState.tracingEnabled) {
 		tracer->printTrace(1, "**%d TB EMPIRIC STOPPING, treatnum: %d;\n",
 			patient->generalState.monthNum,
@@ -4084,6 +4088,9 @@ void StateUpdater::stopEmpiricTBTreatment(bool isFinished) {
 	patient->tbState.monthOfTreatmentOrEmpiricStop = patient->generalState.monthNum;
 	if(isFinished){
 		patient->tbState.everCompletedTreatmentOrEmpiric = true;
+		if(isCured){
+			runStats->tbStats.numCuredAtTreatmentFinish[patient->tbState.currTrueTBResistanceStrain][patient->tbState.currEmpiricTreatmentNum]++;
+		}
 	}
 } /* end stopEmpiricTBTreatment */
 
@@ -4426,7 +4433,7 @@ void StateUpdater::setTBSelfCure(bool isSelfCured){
 
 	//Stop empiric therapy if any
 	if (patient->tbState.isOnEmpiricTreatment)
-		stopEmpiricTBTreatment(true);
+		stopEmpiricTBTreatment(true, true);
 	//stop tb treatment if any
 	if (patient->tbState.isOnTreatment)
 		stopCurrTBTreatment(true, true);

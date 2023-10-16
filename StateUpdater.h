@@ -344,7 +344,7 @@ protected:
 	/* startNextTBEmpiricTreatment updates the patient state and statistics to begin the next empiric TB treatment */
 	void startEmpiricTBTreatment(int treatNum, int previousDuration = 0);
 	/* stopEmpiricTBTreatment updates the patient state and statistics to stop the empiric TB treatment */
-	void stopEmpiricTBTreatment(bool isFinished = false);
+	void stopEmpiricTBTreatment(bool isFinished = false, bool isCured = false);
 	/* transitionEmpiricToRealTreatment handles the change when patient links to TB care if they are on empiric TB treatment */
 	void transitionEmpiricToRealTreatment();
 	/* scheduleNextTBTreatment updates the patient's next scheduled TB treatment after events such as TB RTC and returning DST results */

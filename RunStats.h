@@ -912,7 +912,7 @@ public:
 	/** TBStats class contains stats about TB occurrences, treatments, and costs */
 	class TBStats {
 	public:
-		/** Total number with TB disease at model entry for those infected with TB, stratified by TB type x TB state */
+		/** Total number with TB disease at model entry for those infected with TB, stratified by TB strain x TB state */
 		int numInStateAtEntryStrain[SimContext::TB_NUM_STRAINS][SimContext::TB_NUM_STATES];
 		/** Total number uninfected with TB at model entry*/
 		int numUninfectedTBAtEntry;
@@ -928,30 +928,29 @@ public:
 		int numTransitionsToTBTreatmentDefault[SimContext::TB_NUM_STRAINS][SimContext::TB_NUM_TREATMENTS];
 		/** Total number of times patients finish treatment stratified by observed TB strain x TB treatment number */
 		int numFinishTreatment[SimContext::TB_NUM_STRAINS][SimContext::TB_NUM_TREATMENTS];
-		/** Total number who are cured after finishing treatment stratified by observed TB strain x TB treatment number */
+		/** Total number who are cured after finishing treatment stratified by true TB strain x TB treatment number */
 		int numCuredAtTreatmentFinish[SimContext::TB_NUM_STRAINS][SimContext::TB_NUM_TREATMENTS];
 		/** Total number with increased resistance after stopping treatment stratified by true TB strain before increase x TB treatment number - XDR is included in declaration for convenience but should never be incremented or output*/
 		int numIncreaseResistanceAtTreatmentStop[SimContext::TB_NUM_STRAINS][SimContext::TB_NUM_TREATMENTS];
-		// total number of infections and reinfections, stratified by TB type and TB state
+		// total number of infections and reinfections, stratified by TB strain and TB state
 		int numInfections[SimContext::TB_NUM_STATES][SimContext::TB_NUM_STRAINS];
-		// number of reactivations and reinfections from latent TB, stratified by TB type
-		/** Total number of reactivations from latent TB stratified by TB type*/
+		/** Total number of reactivations from latent TB stratified by TB strain */
 		int numReactivationsLatent[SimContext::TB_NUM_STRAINS];
 		int numReactivationsPulmLatent[SimContext::TB_NUM_STRAINS];
 		int numReactivationsExtraPulmLatent[SimContext::TB_NUM_STRAINS];
 
-		// number of relapses from treated or default TB states, stratified by TB type
+		// number of relapses from treated or default TB states, stratified by TB strain
 		int numRelapses[SimContext::TB_NUM_STRAINS];
 		int numRelapsesPulm[SimContext::TB_NUM_STRAINS];
 		int numRelapsesExtraPulm[SimContext::TB_NUM_STRAINS];
 
-		/** Total number of self-cures from active TB, stratified by TB type */
+		/** Total number of self-cures from active TB, stratified by TB strain */
 		int numTBSelfCures[SimContext::TB_NUM_STRAINS];
-		/** Total number of deaths from active TB, stratified by TB type */
+		/** Total number of deaths from active TB, stratified by TB strain */
 		int numDeaths[SimContext::TB_NUM_STRAINS];
-		// Total number of deaths from active TB in HIV-positive patients, stratified by TB type
+		// Total number of deaths from active TB in HIV-positive patients, stratified by TB strain
 		int numDeathsHIVPos[SimContext::TB_NUM_STRAINS];
-		// Total number of deaths from active TB in HIV-negative patients, stratified by TB type
+		// Total number of deaths from active TB in HIV-negative patients, stratified by TB strain
 		int numDeathsHIVNeg[SimContext::TB_NUM_STRAINS];
 		/** Total number of minor toxicities stratified by treatment line */
 		int numTreatmentMinorToxicity[SimContext::TB_NUM_TREATMENTS];
@@ -1410,14 +1409,13 @@ public:
 		int numHIVTBTrackerCD4[SimContext::TB_NUM_TRACKER][SimContext::CD4_NUM_STRATA];
 		// total number of infections and reinfections this time period, stratified by TB state and TB drug resistance strain
 		int numTBInfections[SimContext::TB_NUM_STATES][SimContext::TB_NUM_STRAINS];
-		// number of reactivations from latent TB, stratified by TB type
-		/** Total number of reactivations from latent TB stratified by TB type*/
+		/** number of reactivations from latent TB this time period, stratified by TB strain*/
 		int numTBReactivationsLatent[SimContext::TB_NUM_STRAINS];
 		int numTBReactivationsPulmLatentHIVNegative[SimContext::TB_NUM_STRAINS];
 		int numTBReactivationsExtraPulmLatentHIVNegative[SimContext::TB_NUM_STRAINS];
 		int numTBReactivationsPulmLatentHIVPositive[SimContext::CD4_NUM_STRATA][SimContext::TB_NUM_STRAINS];
 		int numTBReactivationsExtraPulmLatentHIVPositive[SimContext::CD4_NUM_STRATA][SimContext::TB_NUM_STRAINS];
-		// number of relapses from treated or default TB states, stratified by TB type
+		// number of relapses from treated or default TB states, stratified by TB strain
 		int numTBRelapses[SimContext::TB_NUM_STRAINS];
 		int numTBRelapsesPulm[SimContext::TB_NUM_STRAINS];
 		int numTBRelapsesExtraPulm[SimContext::TB_NUM_STRAINS];
@@ -1452,8 +1450,8 @@ public:
 		int numDefaultTBTreatment[SimContext::TB_NUM_TREATMENTS];
 		int numDefaultTBTreatmentPulm[SimContext::TB_NUM_TREATMENTS];
 		int numDefaultTBTreatmentExtraPulm[SimContext::TB_NUM_TREATMENTS];
-		// Total number who drop out of TB treatment stratified by TB type x TB treatment line
-		int numDropoutTreatment[SimContext::TB_NUM_STRAINS][SimContext::TB_NUM_TREATMENTS];
+		// number who drop out of TB treatment this time period stratified by observed TB strain x TB treatment line
+		int numDropoutTBTreatment[SimContext::TB_NUM_STRAINS][SimContext::TB_NUM_TREATMENTS];
 
 		//TB Deaths
 		int numDeathsTB;

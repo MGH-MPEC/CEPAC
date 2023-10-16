@@ -146,7 +146,7 @@ bool TBClinicalUpdater::performTBTestingUpdates() {
 						resetTests?"yes":"no");
 				}
 
-				//if reset test, do not count result and set curr test to first test
+				//if reset test due to the result taking too long, do not count result and set test indices back to the beginning, clear pending DST since it is also outdated
 				if (resetTests){
 					continueLoop = false;
 					resetTBTesting(false);
@@ -158,6 +158,7 @@ bool TBClinicalUpdater::performTBTestingUpdates() {
 					if (result == SimContext::TB_DIAG_STATUS_POS){
 						if(resultTestNum >=0){
 							//Do DST here if DST not linked
+							//When DST is not linked to the main test, a positive result must be returned from the main test before DST is performed
 							//Only do DST here if we have no pending DST results
 							SimContext::TBInputs::TBTest tbTest = simContext->getTBInputs()->TBTests[resultTestNum];
 							if (willDoDST && !tbTest.DSTLinked && !patient->getTBState()->hasPendingDSTResult){
@@ -303,7 +304,7 @@ bool TBClinicalUpdater::performTBTestingUpdates() {
 						resetTests?"yes":"no");
 				}
 
-				//will not pickup result
+				//will not pickup result - if it has been too long to continue the algorithm, reset tests and clear pending DST since it is also outdated
 				if (resetTests){
 					resetTBTesting(false);
 				}
@@ -336,16 +337,20 @@ void TBClinicalUpdater::checkForStoppingEmpiricTherapy(){
 		//Check to see if time to stop treatment
 		if (monthsTreat >= tbTreat.totalDuration) {
 			bool isSuccess = patient->getTBState()->empiricTreatmentSuccess;
+			bool isCured = false;
 
 			SimContext::TB_STATE tbState = patient->getTBState()->currTrueTBDiseaseState;
-			//Patients who complete a full duration on treatment in the Latent state transition to the Uninfected TB state. They are still flagged as having a history of TB. Note that this does not occur with TB prophyalxis, only with TB treatment (regular or empiric).
+			//Patients who complete a full duration on treatment in the Latent state without experiencing reinfection will transition to the Uninfected TB state. Their treatment cannot fail because there is no Active TB to treat. They are still flagged as having a history of TB. Note that this does not occur with TB prophyalxis, only with TB treatment (regular or empiric).
 			if(tbState == SimContext::TB_STATE_LATENT && patient->getTBState()->monthOfTBStateChange <= patient->getTBState()->monthOfEmpiricTreatmentStart){
 				setTBDiseaseState(SimContext::TB_STATE_UNINFECTED, false, SimContext::TB_INFECT_INITIAL, tbState);
+				isCured = true;
 			}
-			//Change TB state if successful.  Those who are active move to the prev treated state.  Those in other states stay where they are.
+			//Change TB state to Previously Treated if they have Active TB and rolled for success. Those who rolled for failure, got infected while on treatment, or started treatment in the Previously Treated, Treat Default, or Uninfected state remain in the same state at treatment completion.
 			if (isSuccess){
-				if (tbState == SimContext::TB_STATE_ACTIVE_EXTRAPULM || tbState == SimContext::TB_STATE_ACTIVE_PULM)
+				if (tbState == SimContext::TB_STATE_ACTIVE_EXTRAPULM || tbState == SimContext::TB_STATE_ACTIVE_PULM){
 					setTBDiseaseState(SimContext::TB_STATE_PREV_TREATED, false, SimContext::TB_INFECT_INITIAL, tbState);
+					isCured = true;
+				}	
 				//Remove their observed strain status
 				setObservedTBResistanceStrain(false);
 
@@ -375,7 +380,7 @@ void TBClinicalUpdater::checkForStoppingEmpiricTherapy(){
 				}
 			}
 
-			stopEmpiricTBTreatment(true);
+			stopEmpiricTBTreatment(true, isCured);
 		} //end if the duration is complete
 	} //end if the patient is on empiric treatment
 } /* end checkForStoppingEmpiricTherapy */
@@ -460,22 +465,22 @@ void TBClinicalUpdater::performTBTreatmentUpdates() {
 	if (!patient->getTBState()->isOnTreatment){
 		if(!patient->getTBState()->isScheduledForTreatment){
 			SimContext::TB_STRAIN obsvStrain = SimContext::TB_STRAIN_DS;
-	if (patient->getTBState()->hasObservedTBResistanceStrain)
-		obsvStrain = patient->getTBState()->currObservedTBResistanceStrain;
-		// Roll for initial line
-		int lineNum = SimContext::TB_NUM_TREATMENTS - 1;
-		double randNum = CepacUtil::getRandomDouble(60190, patient);
-		bool treathist = patient->getTBState()->everOnTreatmentOrEmpiric;
-		for (int i = 0; i < SimContext::TB_NUM_TREATMENTS; i++) {
-			if (randNum < simContext->getTBInputs()->TBTreatmentProbInitialLine[treathist][obsvStrain][i]) {
-				lineNum = i;
-				break;
+			if (patient->getTBState()->hasObservedTBResistanceStrain)
+				obsvStrain = patient->getTBState()->currObservedTBResistanceStrain;
+			// Roll for initial line
+			int lineNum = SimContext::TB_NUM_TREATMENTS - 1;
+			double randNum = CepacUtil::getRandomDouble(60190, patient);
+			bool treathist = patient->getTBState()->everOnTreatmentOrEmpiric;
+			for (int i = 0; i < SimContext::TB_NUM_TREATMENTS; i++) {
+				if (randNum < simContext->getTBInputs()->TBTreatmentProbInitialLine[treathist][obsvStrain][i]) {
+					lineNum = i;
+					break;
+				}
+				randNum -= simContext->getTBInputs()->TBTreatmentProbInitialLine[treathist][obsvStrain][i];
 			}
-			randNum -= simContext->getTBInputs()->TBTreatmentProbInitialLine[treathist][obsvStrain][i];
-		}
 			//Schedule initial treatment for later this month
 			scheduleNextTBTreatment(lineNum, patient->getGeneralState()->monthNum);
-	}
+		}
 	}
 	// Evaluate treatment changes if on treatment and the intended duration has been exceeded
 	else{
@@ -487,18 +492,22 @@ void TBClinicalUpdater::performTBTreatmentUpdates() {
 		//Check to see if time to stop treatment
 		if (monthsTreat >= tbTreat.totalDuration) {
 			bool isSuccess = patient->getTBState()->treatmentSuccess;
+			bool isCured = false;
 
 			SimContext::TB_STATE tbState = patient->getTBState()->currTrueTBDiseaseState;
-			//Patients who complete a full duration on treatment in the Latent state transition to the Uninfected TB state. They are still flagged as having a history of TB. Note that this does not occur with TB prophyalxis, only with TB treatment (regular or empiric).
+			//Patients who complete a full duration on treatment in the Latent state without experiencing reinfection will transition to the Uninfected TB state. Their treatment cannot fail because there is no Active TB to treat. They are still flagged as having a history of TB. Note that this does not occur with TB prophyalxis, only with TB treatment (regular or empiric).
 			if(tbState == SimContext::TB_STATE_LATENT && patient->getTBState()->monthOfTBStateChange <= patient->getTBState()->monthOfTreatmentStart){
 				setTBDiseaseState(SimContext::TB_STATE_UNINFECTED, false, SimContext::TB_INFECT_INITIAL, tbState);
+				isCured = true;
 			}
-			//Change TB state if successful.  Those who are active move to the prev treated state.  Those in other states stay where they are.
+			//Change TB state to Previously Treated if they have Active TB and rolled for success. Those who rolled for failure, got infected while on treatment, or started treatment in the Previously Treated, Treat Default, or Uninfected state remain in the same state at treatment completion.
 			if (isSuccess){
 				//Remove them from the in care health state
 				setTBCareState(SimContext::TB_CARE_UNLINKED);
-				if (tbState == SimContext::TB_STATE_ACTIVE_EXTRAPULM || tbState == SimContext::TB_STATE_ACTIVE_PULM)
+				if (tbState == SimContext::TB_STATE_ACTIVE_EXTRAPULM || tbState == SimContext::TB_STATE_ACTIVE_PULM){
 					setTBDiseaseState(SimContext::TB_STATE_PREV_TREATED, false, SimContext::TB_INFECT_INITIAL, tbState);
+					isCured = true;
+				}
 				//Remove their observed strain status
 				setObservedTBResistanceStrain(false);
 
@@ -550,7 +559,7 @@ void TBClinicalUpdater::performTBTreatmentUpdates() {
 					}
 				}
 			}
-			stopCurrTBTreatment(true, isSuccess);
+			stopCurrTBTreatment(true, isCured);
 		} //end if duration is complete
 		else{
 			//Check for early observed failure
@@ -578,7 +587,8 @@ void TBClinicalUpdater::performTBTreatmentUpdates() {
 					randNum = CepacUtil::getRandomDouble(60212, patient);
 					
 					if (randNum < tbTreat.probSwitchEarlyFail){
-						//determine next line and switch - note that stopCurrTBTreatment() will not be called before they start the next line
+						//determine next line and switch 
+						stopCurrTBTreatment(false, false);
 						int nextLine = tbTreat.nextTreatNumEarlyFail;
 						if (nextLine != SimContext::NOT_APPL){
 							scheduleNextTBTreatment(nextLine, patient->getGeneralState()->monthNum, false);

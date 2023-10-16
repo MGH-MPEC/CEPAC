@@ -47,14 +47,22 @@ void BeginMonthUpdater::performInitialUpdates() {
         int left = 0;
         int right = numStrata;
         int strat = 0;
+		int numAttempts = 0;
         while (true){
             if (randNum < ageProbs[strat]){
                 if (strat == 0 || ageProbs[strat - 1] <= randNum)
                     break;
                 right = strat;
             }
-            else
+            else{
                 left = strat;
+				numAttempts++;
+				// It should not take more than 5 attempts to find the right stratum out of 32
+				if(numAttempts > 5){
+					printf("\nWARNING: unable to find age stratum for Patient %d. Need a cumulative probability greater than %lf. Defaulting to stratum %d", patient->getGeneralState()->patientNum, randNum, strat+1);
+					break;
+				}
+			}	
             strat = (left+right)/2;
         }
 		// Once the index is found, we use the bounds of this stratum and another random number to determine the patient's initial age

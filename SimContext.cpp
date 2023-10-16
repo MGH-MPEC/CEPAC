@@ -5644,7 +5644,7 @@ void SimContext::readAdolescentARTInputs() {
 	}
 } /* end readAdolescentARTInputs */
 
-/* readAndSkipPast and readAndSkipPast2 skip over the given text in the input file - in other words, they move to a position from which the model will grab items that come next in the buffer */
+/* readAndSkipPast and readAndSkipPast2 skip over the given text in the input file - in other words, they move to a position from which the model will grab items that come next in the buffer by scanning the search string into a temporary variable */
 bool SimContext::readAndSkipPast(const char* searchStr, FILE* file) {
 	char temp[513];
 
@@ -5656,8 +5656,8 @@ bool SimContext::readAndSkipPast(const char* searchStr, FILE* file) {
 
 		if ( feof(file) ) {
 			if(counter<=100){
-			printf("\nWARNING: unexpected end of input file. Looking for %s",searchStr);
-			counter++;
+				printf("\nWARNING: unexpected end of input file. Looking for %s",searchStr);
+				counter++;
 			}
 
 			return false;

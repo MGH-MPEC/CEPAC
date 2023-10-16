@@ -567,6 +567,7 @@ void RunStats::initDeathStats() {
 	for(int i = 0; i < SimContext::PEDS_CD4_AGE_CAT_NUM; i++){
 		deathStats.numARTToxDeathsCD4Metric[i] = 0;
 	}
+
 	for (int i = 0; i < SimContext::DTH_NUM_CAUSES; i++) {
 		deathStats.numDeathsHIVPosType[i] = 0;
 		deathStats.numDeathsType[i] = 0;
@@ -574,18 +575,15 @@ void RunStats::initDeathStats() {
             deathStats.numDeathsTypeAge[i][j] = 0;
         }
 	}
+
 	for (int i = 0; i < SimContext::CD4_NUM_STRATA; i++) {
 		deathStats.numDeathsCD4[i] = 0;
-	}
-	for (int i = 0; i < SimContext::HVL_NUM_STRATA; i++) {
-		deathStats.numDeathsHVL[i] = 0;
-	}
-	for (int i = 0; i < SimContext::CD4_NUM_STRATA; i++) {
 		for (int j = 0; j < SimContext::DTH_NUM_CAUSES; j++) {
 			deathStats.numDeathsCD4Type[i][j] = 0;
 		}
 	}
 	for (int i = 0; i < SimContext::HVL_NUM_STRATA; i++) {
+		deathStats.numDeathsHVL[i] = 0;
 		for (int j = 0; j < SimContext::CD4_NUM_STRATA; j++) {
 			deathStats.numDeathsHVLCD4[i][j] = 0;
 		}
@@ -599,6 +597,7 @@ void RunStats::initDeathStats() {
 	}
 
 	for (int i=0;i<SimContext::CD4_NUM_STRATA;i++){
+		deathStats.numARTToxDeathsCD4[i] = 0;
 		for (int j=0;j<SimContext::HVL_NUM_STRATA;j++){
 			deathStats.numARTToxDeathsCD4HVL[i][j]=0;
 			for (int k=0;k<SimContext::OI_NUM;k++){
@@ -1234,8 +1233,8 @@ void RunStats::initTimeSummary(TimeSummary *currTime, bool isDynamic) {
 
 	for (int i = 0; i < SimContext::TB_NUM_STRAINS; i++){
 		for (int j = 0; j < SimContext::TB_NUM_TREATMENTS; j++){
-			currTime->numDropoutTreatment[i][j] = 0;
-		}
+			currTime->numDropoutTBTreatment[i][j] = 0;
+		}	
 	}
 			
 	currTime->numDeathsTB = 0;
@@ -3681,12 +3680,12 @@ void RunStats::writeTBStats() {
 		for ( i = 0; i < SimContext::TB_NUM_STRAINS; ++i )
 			fprintf(statsFile, "\t%lu", tbStats.numInStateAtEntryStrain[i][j]);
 	}
-
+	fprintf(statsFile, "\n\tTB Care Outcomes");
 	fprintf(statsFile, "\n\tStart on TB Treatment:");
 	for ( j = 0; j < SimContext::TB_NUM_TREATMENTS; ++j )
 		fprintf(statsFile, "\t%d", j);
 	for ( i = 0; i < SimContext::TB_NUM_STRAINS; ++i ) {
-		fprintf(statsFile, "\n\t%s", SimContext::TB_STRAIN_STRS[i]);
+		fprintf(statsFile, "\n\tObsv %s", SimContext::TB_STRAIN_STRS[i]);
 		for ( j = 0; j < SimContext::TB_NUM_TREATMENTS; ++j )
 			fprintf(statsFile, "\t%lu", tbStats.numStartOnTreatment[i][j]);
 	}
@@ -3694,15 +3693,15 @@ void RunStats::writeTBStats() {
 	for ( j = 0; j < SimContext::TB_NUM_TREATMENTS; ++j )
 		fprintf(statsFile, "\t%d", j);
 	for ( i = 0; i < SimContext::TB_NUM_STRAINS; ++i ) {
-		fprintf(statsFile, "\n\t%s", SimContext::TB_STRAIN_STRS[i]);
+		fprintf(statsFile, "\n\tObsv %s", SimContext::TB_STRAIN_STRS[i]);
 		for ( j = 0; j < SimContext::TB_NUM_TREATMENTS; ++j )
 			fprintf(statsFile, "\t%lu", tbStats.numDropoutTreatment[i][j]);
 	}
-	fprintf(statsFile, "\n\tTransitions to TB Treatment Default:");
+	fprintf(statsFile, "\n\tTransitions to TB Treatment Default after TB LTFU:");
 	for ( j = 0; j < SimContext::TB_NUM_TREATMENTS; ++j )
 		fprintf(statsFile, "\t%d", j);
 	for ( i = 0; i < SimContext::TB_NUM_STRAINS; ++i ) {
-		fprintf(statsFile, "\n\t%s", SimContext::TB_STRAIN_STRS[i]);
+		fprintf(statsFile, "\n\tObsv %s", SimContext::TB_STRAIN_STRS[i]);
 		for ( j = 0; j < SimContext::TB_NUM_TREATMENTS; ++j )
 			fprintf(statsFile, "\t%lu", tbStats.numTransitionsToTBTreatmentDefault[i][j]);
 	}
@@ -3710,10 +3709,11 @@ void RunStats::writeTBStats() {
 	for ( j = 0; j < SimContext::TB_NUM_TREATMENTS; ++j )
 		fprintf(statsFile, "\t%d", j);
 	for ( i = 0; i < SimContext::TB_NUM_STRAINS; ++i ) {
-		fprintf(statsFile, "\n\t%s", SimContext::TB_STRAIN_STRS[i]);
+		fprintf(statsFile, "\n\tObsv %s", SimContext::TB_STRAIN_STRS[i]);
 		for ( j = 0; j < SimContext::TB_NUM_TREATMENTS; ++j )
 			fprintf(statsFile, "\t%lu", tbStats.numFinishTreatment[i][j]);
 	}
+	fprintf(statsFile, "\n\tTB Treatment Efficacy Outcomes (All TB Care States)");
 	fprintf(statsFile, "\n\tTB Cure at Treatment Completion:");
 	for ( j = 0; j < SimContext::TB_NUM_TREATMENTS; ++j )
 		fprintf(statsFile, "\t%d", j);
@@ -3731,7 +3731,7 @@ void RunStats::writeTBStats() {
 	fprintf(statsFile, "\n\tmdrTB to xdrTB");
 	for ( j = 0; j < SimContext::TB_NUM_TREATMENTS; ++j )
 		fprintf(statsFile, "\t%lu", tbStats.numIncreaseResistanceAtTreatmentStop[SimContext::TB_STRAIN_MDR][j]);
-	fprintf(statsFile, "\n\tTotal TB Incident Infections/Reinfections");
+	fprintf(statsFile, "\n\n\tTotal TB Incident Infections/Reinfections");
 	for ( i = 0; i < SimContext::TB_NUM_STRAINS; ++i )
 		fprintf(statsFile, "\t%s", SimContext::TB_STRAIN_STRS[i]);
 	for(i = 0; i < SimContext::TB_NUM_STATES; ++i ){
@@ -4893,9 +4893,9 @@ void RunStats::writeTimeSummaries() {
 			fprintf(statsFile, "\n\tNum Dropout TB Treatment:");
 
 			for (int i = 0; i < SimContext::TB_NUM_STRAINS; ++i ) {
-				fprintf(statsFile, "\n\t%s", SimContext::TB_STRAIN_STRS[i]);
+				fprintf(statsFile, "\n\tObsv %s", SimContext::TB_STRAIN_STRS[i]);
 				for ( j = 0; j < SimContext::TB_NUM_TREATMENTS; ++j )
-					fprintf(statsFile, "\t%lu", currTime->numDropoutTreatment[i][j]);
+					fprintf(statsFile, "\t%lu", currTime->numDropoutTBTreatment[i][j]);
 			}
 
 
