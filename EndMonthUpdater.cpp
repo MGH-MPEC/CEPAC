@@ -127,11 +127,11 @@ void EndMonthUpdater::performMonthlyUpdates() {
 		double cost = simContext->getTBInputs()->tbProphInputs[prophNum].costMonthly;
 		incrementCostsTBProph(prophNum, cost);
 	}
-
+	//Due to the timing of treatment start within the simulation month, the first TB treatment stage is calculated differently depending on whether it is at the end of the month (LTFU and costs: threshold month excluded) or the beginning of the month (toxicity: threshold month included)
 	if (patient->getTBState()->isOnTreatment) {
 		int treatNum = patient->getTBState()->currTreatmentNum;
 		int stage = 1;
-		if((patient->getGeneralState()->monthNum - patient->getTBState()->monthOfTreatmentStart + patient->getTBState()->previousTreatmentDuration) <= simContext->getTBInputs()->TBTreatments[treatNum].stage1Duration)
+		if((patient->getGeneralState()->monthNum - patient->getTBState()->monthOfTreatmentStart + patient->getTBState()->previousTreatmentDuration) < simContext->getTBInputs()->TBTreatments[treatNum].stage1Duration)
 			stage = 0;
 		double cost = simContext->getTBInputs()->TBTreatments[treatNum].costMonthly[stage];
 		incrementCostsTBTreatment(cost, treatNum);
@@ -139,7 +139,7 @@ void EndMonthUpdater::performMonthlyUpdates() {
 	if (patient->getTBState()->isOnEmpiricTreatment) {
 		int treatNum = patient->getTBState()->currEmpiricTreatmentNum;
 		int stage = 1;
-		if((patient->getGeneralState()->monthNum - patient->getTBState()->monthOfEmpiricTreatmentStart + patient->getTBState()->previousEmpiricTreatmentDuration) <= simContext->getTBInputs()->TBTreatments[treatNum].stage1Duration)
+		if((patient->getGeneralState()->monthNum - patient->getTBState()->monthOfEmpiricTreatmentStart + patient->getTBState()->previousEmpiricTreatmentDuration) < simContext->getTBInputs()->TBTreatments[treatNum].stage1Duration)
 			stage = 0;
 		double cost = simContext->getTBInputs()->TBTreatments[treatNum].costMonthly[stage];
 		incrementCostsTBTreatment(cost, treatNum);
@@ -359,7 +359,7 @@ void EndMonthUpdater::performMonthlyUpdates() {
 		for(int i = 0; i < simContext->NUM_DISCOUNT_RATES; i++){
 			incrementMultDiscountFactor(simContext->getRunSpecsInputs()->multDiscountRatesCost[i], simContext->getRunSpecsInputs()->multDiscountRatesBenefit[i], i);
 		}
-	}
+	} /** end if patient is alive */
 	else {
 		/** Increment the patient and overall survival stats */
 		updatePatientSurvival(percentOfMonth);

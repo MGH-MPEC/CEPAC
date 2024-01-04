@@ -332,6 +332,7 @@ void DrugToxicityUpdater::performTBTreatmentToxicityUpdates() {
 	bool isOnTreatment = false;
 	int treatNum;
 	int stage = 1;
+	//Due to the timing of treatment start within the simulation month, the first TB treatment stage is calculated differently depending on whether it is at the end of the month (LTFU and costs: threshold month excluded) or the beginning of the month (toxicity: threshold month included)
 
 	SimContext::TBInputs::TBTreatment tbTreat;
 	if (patient->getTBState()->isOnTreatment){

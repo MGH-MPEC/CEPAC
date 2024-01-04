@@ -635,11 +635,12 @@ void TBClinicalUpdater::performTBLTFUUpdates() {
 			setTBRTC();
 	}
 	else{
-		int stage = 0;
+		//Due to the timing of treatment start within the simulation month, the first TB treatment stage is calculated differently depending on whether it is at the end of the month (LTFU and costs: threshold month excluded) or the beginning of the month (toxicity: threshold month included)
+		int stage = 1;
 		if(patient->getTBState()->isOnTreatment){
 			int treatNum = patient->getTBState()->currTreatmentNum;
-			if((patient->getGeneralState()->monthNum - patient->getTBState()->monthOfTreatmentStart + patient->getTBState()->previousTreatmentDuration) > simContext->getTBInputs()->TBTreatments[treatNum].stage1Duration)
-				stage = 1;
+			if((patient->getGeneralState()->monthNum - patient->getTBState()->monthOfTreatmentStart + patient->getTBState()->previousTreatmentDuration) < simContext->getTBInputs()->TBTreatments[treatNum].stage1Duration)
+				stage = 0;
 		}		
 		//Roll for going LTFU
 		double probLTFU = simContext->getTBInputs()->probLTFU[stage][tbState];
