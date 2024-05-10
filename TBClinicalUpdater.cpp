@@ -584,15 +584,13 @@ void TBClinicalUpdater::performTBTreatmentUpdates() {
 					}
 					
 					//Roll for switch lines
+					int nextLine = tbTreat.nextTreatNumEarlyFail;
 					randNum = CepacUtil::getRandomDouble(60212, patient);
 					
-					if (randNum < tbTreat.probSwitchEarlyFail){
+					if (nextLine != SimContext::NOT_APPL && randNum < tbTreat.probSwitchEarlyFail){
 						//determine next line and switch 
 						stopCurrTBTreatment(false, false);
-						int nextLine = tbTreat.nextTreatNumEarlyFail;
-						if (nextLine != SimContext::NOT_APPL){
-							scheduleNextTBTreatment(nextLine, patient->getGeneralState()->monthNum, false);
-						}
+						scheduleNextTBTreatment(nextLine, patient->getGeneralState()->monthNum, false);
 					}
 				}
 			}

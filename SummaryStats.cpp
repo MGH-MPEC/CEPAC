@@ -218,7 +218,7 @@ void SummaryStats::writeSummariesFile() {
 			fprintf(summariesFile, "%s\t", summary->runDate.c_str());
 			fprintf(summariesFile, "%s\t", summary->runTime.c_str());
 			fprintf(summariesFile, "%ld\t", summary->numCohorts);
-			fprintf(summariesFile, "%1.0lf\t", summary->costsAverage);
+			fprintf(summariesFile, "%1.2lf\t", summary->costsAverage);
 			fprintf(summariesFile, "%1.4lf\t", summary->LMsAverage);
 			fprintf(summariesFile, "%1.4lf\t", summary->QALMsAverage);
 			// write out dominated or a real ratio per LY

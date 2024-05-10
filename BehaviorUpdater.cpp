@@ -67,7 +67,7 @@ void BehaviorUpdater::performMonthlyUpdates() {
 		setAdherenceInterventionState(true, intvIndex, duration);
 
 		/** roll for coefficient adjustment */
-		double adjustment;
+		double adjustment = -1;
 		double responseMean = simContext->getHeterogeneityInputs()->interventionAdjustmentMean[intvIndex];
 		double responseSD = simContext->getHeterogeneityInputs()->interventionAdjustmentSD[intvIndex];
 		SimContext::HET_ART_LOGIT_DISTRIBUTION responseDist = simContext->getHeterogeneityInputs()->interventionAdjustmentDistribution[intvIndex];
@@ -116,9 +116,8 @@ void BehaviorUpdater::performMonthlyUpdates() {
 		}
 	} //end checking whether to start adherence intervention
 
-	//add costs for monthly adherence intervention
+	//add monthly costs for adherence intervention
 	if (patient->getGeneralState()->isOnAdherenceIntervention){
-		//add cost of intervention startup
 		incrementCostsInterventionMonthly(simContext->getHeterogeneityInputs()->interventionCostMonthly[patient->getGeneralState()->currAdherenceIntervention]*
 				simContext->getLTFUInputs()->propInterventionCost[patient->getMonitoringState()->careState]);
 	}

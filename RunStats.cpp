@@ -2505,7 +2505,7 @@ void RunStats::writePopulationSummary() {
 			double annualRateBenefit = pow(simContext->getRunSpecsInputs()->multDiscountRatesBenefit[i],12.0)-1;
 
 			fprintf(statsFile,"\n\tOutcome/Measure \tDiscount Rate \tAverage \tStd Dev");
-			fprintf(statsFile,"\n\tCosts \t%1.2lf \t%1.0lf \t%1.0lf",
+			fprintf(statsFile,"\n\tCosts \t%1.2lf \t%1.2lf \t%1.2lf",
 				annualRateCost, popSummary.multDiscCostsAverage[i], popSummary.multDiscCostsStdDev[i]);
 			fprintf(statsFile,"\n\tLife Months \t%1.2lf \t%1.4lf \t%1.4lf",
 				annualRateBenefit, popSummary.multDiscLMsAverage[i], popSummary.multDiscLMsStdDev[i]);
@@ -2516,7 +2516,7 @@ void RunStats::writePopulationSummary() {
 	else{
 		// Print out costs and LM totals
 		fprintf(statsFile,"\n\tOutcome/Measure \tAverage \tStd Dev \tLB \tUB");
-		fprintf(statsFile,"\n\tCosts \t%1.0lf \t%1.0lf \t%1.0lf \t%1.0lf",
+		fprintf(statsFile,"\n\tCosts \t%1.2lf \t%1.2lf \t%1.2lf \t%1.2lf",
 			popSummary.costsAverage, popSummary.costsStdDev,
 			popSummary.costsLowerBound, popSummary.costsUpperBound);
 		fprintf(statsFile,"\n\tLife Months \t%1.4lf \t%1.4lf \t%1.4lf \t%1.4lf",
@@ -2532,7 +2532,7 @@ void RunStats::writePopulationSummary() {
 		fprintf(statsFile, "\n\tSub-Cohort Size\tAverage Costs\tStd Dev of Costs\tAverage LMs\tStd Dev of LMs\tAvg QALMs\tStd Dev of QALMs");
 		for(int i = 0; i < SimContext::MAX_NUM_SUBCOHORTS; i++){
 			if(simContext->getOutputInputs()->subCohorts[i]>0){
-				fprintf(statsFile, "\n\t%d\t%1.0lf\t%1.0lf\t%1.4lf\t%1.4lf\t%1.4lf\t%1.4lf",
+				fprintf(statsFile, "\n\t%d\t%1.2lf\t%1.2lf\t%1.4lf\t%1.4lf\t%1.4lf\t%1.4lf",
 						simContext->getOutputInputs()->subCohorts[i],
 						popSummary.costsAverageCohortParsing[i], popSummary.costsStdDevCohortParsing[i],
 						popSummary.LMsAverageCohortParsing[i], popSummary.LMsStdDevCohortParsing[i],
@@ -2543,11 +2543,11 @@ void RunStats::writePopulationSummary() {
 	// output avg costs, LMs, QALMs by line of ARTs
 	fprintf(statsFile,"\n\t \tAvg Costs \tAvg LMs \tAvg QALMs");
 	for (i = 0; i < SimContext::ART_NUM_LINES+1; ++i) {
-		fprintf(statsFile,"\n\tUp to %d ART(s) obsv fail \t%1.0lf \t%1.4lf \t%1.4lf", i,
+		fprintf(statsFile,"\n\tUp to %d ART(s) obsv fail \t%1.2lf \t%1.4lf \t%1.4lf", i,
 			popSummary.costsFailARTAverage[i], popSummary.LMsFailARTAverage[i],
 			popSummary.QALMsFailARTAverage[i]);
 	}
-	fprintf(statsFile,"\n\tOnly HIV+ patients \t%1.0lf \t%1.4lf \t%1.4lf",
+	fprintf(statsFile,"\n\tOnly HIV+ patients \t%1.2lf \t%1.4lf \t%1.4lf",
 		popSummary.costsHIVPositiveAverage, popSummary.LMsHIVPositiveAverage,
 		popSummary.QALMsHIVPositiveAverage);
 	fprintf(statsFile,"\n\tTotal Clinic Visits \t%1lu", popSummary.totalClinicVisits);
