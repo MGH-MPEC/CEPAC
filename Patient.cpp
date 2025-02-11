@@ -133,6 +133,6 @@ void Patient::simulateMonth() {
 	tbClinicalUpdater.performMonthlyUpdates();
 	endMonthUpdater.performMonthlyUpdates();
 
-} /* endSimulateMonth */
+} /* end SimulateMonth */
 
 

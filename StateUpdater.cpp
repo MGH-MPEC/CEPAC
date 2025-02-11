@@ -774,11 +774,8 @@ void StateUpdater::removePendingEIDTestsAndResults(bool removeOITests){
 	else{
 		int i = 0;
 		while (i < patient->pedsState.eidPendingTestResults.size()){
-			bool triggeredByOI = patient->pedsState.eidPendingTestResults[i].triggeredByOI;
-			if (!triggeredByOI){
-				// Slightly hackish way to get a regular iterator from a const iterator, this is necessary
-				//	since erase requires a regular iterator
-				vector<SimContext::EIDTestState>::const_iterator beginIter = patient->pedsState.eidPendingTestResults.begin();
+			SimContext::OI_TYPE triggeredByOI = patient->pedsState.eidPendingTestResults[i].triggeredByOI;
+			if (triggeredByOI == SimContext::OI_NONE){
 				vector<SimContext::EIDTestState>::iterator eraseIter = patient->pedsState.eidPendingTestResults.begin();
 				advance(eraseIter, i);
 
@@ -791,11 +788,8 @@ void StateUpdater::removePendingEIDTestsAndResults(bool removeOITests){
 
 		i = 0;
 		while (i < patient->pedsState.eidScheduledConfirmatoryTests.size()){
-			bool triggeredByOI = patient->pedsState.eidScheduledConfirmatoryTests[i].triggeredByOI;
-			if (!triggeredByOI){
-				// Slightly hackish way to get a regular iterator from a const iterator, this is necessary
-				//	since erase requires a regular iterator
-				vector<SimContext::EIDTestState>::const_iterator beginIter = patient->pedsState.eidScheduledConfirmatoryTests.begin();
+			SimContext::OI_TYPE triggeredByOI = patient->pedsState.eidScheduledConfirmatoryTests[i].triggeredByOI;
+			if (triggeredByOI == SimContext::OI_NONE){
 				vector<SimContext::EIDTestState>::iterator eraseIter = patient->pedsState.eidScheduledConfirmatoryTests.begin();
 				advance(eraseIter, i);
 
@@ -1044,12 +1038,13 @@ void StateUpdater::scheduleHVLTest(bool hasNext, int monthNum) {
 
 /** \brief performEIDTest handles doing an eid base test or confirmatory test
  *
- * \param assayNum a bool indicating which hiv test is to be performed (test assay)
+ * \param baseAssay is an int for which hiv test was the base assay
+ * \param testAssay is an int for which hiv test will be performed
  * \param testType is a SimContext::EID_TEST_TYPE specifying whether it is a base test or confirmatory test
- * \param triggerdByOI is a bool indicating if the test was due to an OI
+ * \param triggerdByOI is a SimContext::OI_TYPE for the OI type which triggered the test if it was not routine (OI_NONE if not triggered by OI)
  * \param isNonMaternal is a bool indicating if child is brought by non-maternal caregiver
  **/
-void StateUpdater::performEIDTest(int baseAssay, int testAssay, SimContext::EID_TEST_TYPE testType, bool triggeredByOI, bool isNonMaternal){
+void StateUpdater::performEIDTest(int baseAssay, int testAssay, SimContext::EID_TEST_TYPE testType, SimContext::OI_TYPE triggeredByOI, bool isNonMaternal){
 	SimContext::EIDInputs::EIDTest eidTest = simContext->getEIDInputs()->EIDTests[testAssay];
 
 	/** patient has presented to visit*/
@@ -1147,7 +1142,8 @@ void StateUpdater::performEIDTest(int baseAssay, int testAssay, SimContext::EID_
 
 /** \brief rollForEIDTestResult handles getting a result for eid tests
  *
- * \param assayNum a bool indicating which hiv test is being used (test assay)
+ * \param assayNum an int indicating which hiv test is being used (test assay)
+ * \param testType is a SimContext::EID_TEST_TYPE specifying whether it is a base test or confirmatory test
  **/
 bool StateUpdater::rollForEIDTestResult(int assayNum, SimContext::EID_TEST_TYPE testType){
 	SimContext::EIDInputs::EIDTest eidTest = simContext->getEIDInputs()->EIDTests[assayNum];
@@ -1303,10 +1299,10 @@ bool StateUpdater::rollForEIDTestResult(int assayNum, SimContext::EID_TEST_TYPE 
 
 /** \brief rollForEIDLinkage handles linkage to care from EID
  *
- * \param assayNum an int indicating which hiv test is being used (test assay)
- * \param triggeredByOI a bool indicating whether the test was a confirmatory one triggered by an occurrence of an acute OI
+ * \param assayNum is an int indicating which hiv test is being used (test assay)
+ * \param triggeredByOI is a SimContext::OI_TYPE for the OI type which triggered the test if it was not routine (OI_NONE if not triggered by OI)
  **/
-void StateUpdater::rollForEIDLinkage (int assayNum, bool triggeredByOI){
+void StateUpdater::rollForEIDLinkage (int assayNum, SimContext::OI_TYPE triggeredByOI){
 	SimContext::EIDInputs::EIDTest baseEIDTest = simContext->getEIDInputs()->EIDTests[assayNum];
 	double randNum = CepacUtil::getRandomDouble(100190, patient);
 	if (randNum < baseEIDTest.EIDProbLinkage){
@@ -1314,7 +1310,7 @@ void StateUpdater::rollForEIDLinkage (int assayNum, bool triggeredByOI){
 			//true positives
 			bool wasPrevDetected = patient->monitoringState.isDetectedHIVPositive;
 
-			if (triggeredByOI){
+			if (triggeredByOI != SimContext::OI_NONE){
 				if (wasPrevDetected)
 					setLinkedState(true, SimContext::HIV_DET_OI_PREV_DET);
 				else
@@ -1370,8 +1366,9 @@ void StateUpdater::rollForEIDLinkage (int assayNum, bool triggeredByOI){
  * \param result gives the test result
  * \param monthOfReturn is the month the test result will be known
  * \param willBeReturnedToPatient is whether the patient receives the result
+ * \param triggeredByOI is a SimContext::OI_TYPE for the OI type which triggered the test if it was not routine (OI_NONE if not triggered by OI)
  **/
-void StateUpdater::addPendingResultEIDTest(int baseAssay, int testAssay, SimContext::EID_TEST_TYPE testType, bool result, int monthOfReturn, bool willBeReturnedToPatient, bool triggeredByOI){
+void StateUpdater::addPendingResultEIDTest(int baseAssay, int testAssay, SimContext::EID_TEST_TYPE testType, bool result, int monthOfReturn, bool willBeReturnedToPatient, SimContext::OI_TYPE triggeredByOI){
 	SimContext::EIDTestState testResult;
 	testResult.baseAssay = baseAssay;
 	testResult.testAssay = testAssay;
@@ -1396,13 +1393,10 @@ void StateUpdater::performEIDResultReturnUpdates() {
 		int monthToReturn = patient->pedsState.eidPendingTestResults[i].monthToReturn;
 		bool returnToPatient = patient->pedsState.eidPendingTestResults[i].returnToPatient;
 		bool result = patient->pedsState.eidPendingTestResults[i].result;
-		bool triggeredByOI = patient->pedsState.eidPendingTestResults[i].triggeredByOI;
+		SimContext::OI_TYPE triggeredByOI = patient->pedsState.eidPendingTestResults[i].triggeredByOI;
 
 		//Is month to get this result
 		if (patient->generalState.monthNum == monthToReturn){
-			// Slightly hackish way to get a regular iterator from a const iterator, this is necessary
-			//	since erase requires a regular iterator
-			vector<SimContext::EIDTestState>::const_iterator beginIter = patient->pedsState.eidPendingTestResults.begin();
 			vector<SimContext::EIDTestState>::iterator eraseIter = patient->pedsState.eidPendingTestResults.begin();
 			advance(eraseIter, i);
 
@@ -1517,11 +1511,11 @@ void StateUpdater::performEIDResultReturnUpdates() {
 					//set detected state if not false positive
 					if(patient->diseaseState.infectedHIVState != SimContext::HIV_INF_NEG){
 						bool wasPrevDetected = patient->monitoringState.isDetectedHIVPositive;
-						if (triggeredByOI){
+						if (triggeredByOI != SimContext::OI_NONE){
 							if (wasPrevDetected)
-								setDetectedHIVState(true, SimContext::HIV_DET_OI_PREV_DET);
+								setDetectedHIVState(true, SimContext::HIV_DET_OI_PREV_DET, triggeredByOI);
 							else
-								setDetectedHIVState(true, SimContext::HIV_DET_OI);
+								setDetectedHIVState(true, SimContext::HIV_DET_OI, triggeredByOI);
 						}
 						else{
 							if (wasPrevDetected)
@@ -1553,9 +1547,6 @@ void StateUpdater::performEIDFirstConfirmatoryTests(){
 		if (currTest.testType == SimContext::EID_TEST_TYPE_FIRST_CONF && currTest.monthToReturn == patient->generalState.monthNum){
 			performEIDTest(currTest.baseAssay, currTest.testAssay, SimContext::EID_TEST_TYPE_FIRST_CONF, currTest.triggeredByOI, false);
 
-			// Slightly hackish way to get a regular iterator from a const iterator, this is necessary
-			//	since erase requires a regular iterator
-			vector<SimContext::EIDTestState>::const_iterator beginIter = patient->pedsState.eidScheduledConfirmatoryTests.begin();
 			vector<SimContext::EIDTestState>::iterator eraseIter = patient->pedsState.eidScheduledConfirmatoryTests.begin();
 			advance(eraseIter, i);
 
@@ -1576,9 +1567,6 @@ void StateUpdater::performEIDSecondConfirmatoryTests(){
 		if (currTest.testType == SimContext::EID_TEST_TYPE_SECOND_CONF && currTest.monthToReturn == patient->generalState.monthNum){
 			performEIDTest(currTest.baseAssay, currTest.testAssay, SimContext::EID_TEST_TYPE_SECOND_CONF, currTest.triggeredByOI, false);
 
-			// Slightly hackish way to get a regular iterator from a const iterator, this is necessary
-			//	since erase requires a regular iterator
-			vector<SimContext::EIDTestState>::const_iterator beginIter = patient->pedsState.eidScheduledConfirmatoryTests.begin();
 			vector<SimContext::EIDTestState>::iterator eraseIter = patient->pedsState.eidScheduledConfirmatoryTests.begin();
 			advance(eraseIter, i);
 
@@ -1597,8 +1585,9 @@ void StateUpdater::performEIDSecondConfirmatoryTests(){
  * \param testAssay is the index of the test result
  * \param testType specifies which conf test this is
  * \param month is the month the conf test visit will be scheduled for
+ * \param triggeredByOI is a SimContext::OI_TYPE for the OI type which triggered the test if it was not routine (OI_NONE if not triggered by OI)
  **/
-void StateUpdater::scheduleEIDConfirmatoryTest(int baseAssay, int testAssay, SimContext::EID_TEST_TYPE testType, int month, bool triggeredByOI){
+void StateUpdater::scheduleEIDConfirmatoryTest(int baseAssay, int testAssay, SimContext::EID_TEST_TYPE testType, int month, SimContext::OI_TYPE triggeredByOI){
 	SimContext::EIDTestState scheduledTest;
 	scheduledTest.baseAssay = baseAssay;
 	scheduledTest.testAssay = testAssay;
@@ -2120,7 +2109,7 @@ void StateUpdater::incrementNumObservedOIs(SimContext::OI_TYPE oiType, int numOb
 	runStats->oiStats.numDetectedOIsCD4OI[cd4Strata][oiType] += numObserved;
 } /* end incrementNumObservedOIs */
 
-/** \brief setCurrLTFUStats updates the state and statisitics for a patient being LTFU or RTC
+/** \brief setCurrLTFUStats updates the state and statistics for a patient being LTFU or RTC
  *
  * \param ltfuState a SimContext::LTFU_STATE indicating which LTFU state to set the patient to
  *
@@ -2420,16 +2409,18 @@ void StateUpdater::setCurrARTEfficacy(SimContext::ART_EFF_TYPE efficacyType, boo
 	}
 } /* end setCurrARTEfficacy */
 
-/** \brief setResuppEfficacy updates the efficacy each time a resuppression is attempted
+/** \brief incrementARTFailedResupp increments the number of consecutive times the patient rolled for failure in a resuppression attempt
  *
- * \param efficacyType a SimContext::ART_EFF_TYPE indicating the efficacy of the current ART regimen
  **/
-void StateUpdater::setResuppEfficacy(SimContext::ART_EFF_TYPE efficacyType) {
-	if (efficacyType == SimContext::ART_EFF_FAILURE)
+void StateUpdater::incrementARTFailedResupp() {
 		patient->artState.numFailedResupp++;
-	else
+} /* end incrementARTFailedResupp */
+
+/** \brief resetARTFailedResupp resets to 0 the number of consecutive times the patient rolled for failure in a resuppression attempt
+**/
+void StateUpdater::resetARTFailedResupp() {
 		patient->artState.numFailedResupp = 0;
-} /* end setResuppEfficacy */
+} /* end resetARTFailedResupp */
 
 /** \brief setCurrARTResponse sets the calculated ART propensity to respond and response type
  *
@@ -2704,7 +2695,7 @@ void StateUpdater::incrementCD4Envelope(SimContext::ENVL_CD4_TYPE envelopeType, 
 		patient->artState.indivCD4PercentageEnvelope.value += changeCD4;
 } /* end incrementCD4Envelope */
 
-/** \brief setCurrARTRegimenFailure updates the state to begin the next ART treatment regimen
+/** \brief setCurrARTObservedFailure updates the state to begin the next ART treatment regimen
  *
  * ART statistics for observed failure are updated here.
  *
@@ -2877,7 +2868,8 @@ void StateUpdater::setARTToxicity(const SimContext::ARTToxicityEffect &toxEffect
 			if ((toxEffect.toxSeverityType > severeToxEffect->toxSeverityType) ||
 				(toxInputs.chronicToxDeathRateRatio > severeToxInputs.chronicToxDeathRateRatio) ||
 				(toxInputs.acuteMajorToxDeathRateRatio > severeToxInputs.acuteMajorToxDeathRateRatio) ||
-				(toxInputs.QOLModifier < severeToxInputs.QOLModifier)) {
+				(simContext->getQOLInputs()->QOLCalculationType != SimContext::ADD && toxInputs.QOLModifier < severeToxInputs.QOLModifier) ||
+				(simContext->getQOLInputs()->QOLCalculationType == SimContext::ADD && toxInputs.QOLModifier > severeToxInputs.QOLModifier)) {
 					patient->artState.severeToxicityEffect = &toxEffect;
 			}
 		}
@@ -5588,7 +5580,7 @@ void StateUpdater::incrementCostsHIVMisc(double cost) {
 		currTime->costsHIVMisc += cost * patient->generalState.discountFactor;
 	}
 	incrementCostsCommon(cost, 1.0);
-} /* end incrementCostsHIVTest */
+} /* end incrementCostsHIVMisc */
 
 /** \brief incrementCostsLabStagingTest adds a Lab Staging testing cost to the patients total
  *

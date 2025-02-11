@@ -31,7 +31,12 @@ int main(int argc, char *argv[]) {
 		CepacUtil::changeDirectoryToInputs();
 	}
 	else {
+		/** Specify that the directory of the exe is the inputsDirectory */
 		CepacUtil::useCurrentDirectoryForInputs();
+		/** Need to actively cd into the inputsDirectory if on Mac */
+		#if __APPLE__
+			CepacUtil::changeDirectoryToInputs();
+		#endif
 	}
 
 	/** Create the results directory and the summaries stats object */

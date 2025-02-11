@@ -145,7 +145,7 @@ void AcuteOIUpdater::performMonthlyUpdates() {
 						testAssay = simContext->getEIDInputs()->hivDetectionWithOIAssayAfterN1[maternalKnowledge];
 
 					if (testAssay != SimContext::NOT_APPL)
-						performEIDTest(testAssay, testAssay, SimContext::EID_TEST_TYPE_BASE,true, false);
+						performEIDTest(testAssay, testAssay, SimContext::EID_TEST_TYPE_BASE, oiType, false);
 				}
 				else{
 					linkToCare = true;

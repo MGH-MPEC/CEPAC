@@ -370,7 +370,7 @@ void BehaviorUpdater::performMonthlyUpdates() {
 				}
 				else {
 					randNum = CepacUtil::getRandomDouble(30040, patient);
-					if (randNum < simContext->getLTFUInputs()->probRestartRegimenWithoutObsvervedFailure) {
+					if (randNum < simContext->getLTFUInputs()->probRestartRegimenWithoutObservedFailure) {
 						setNextARTRegimen(true, patient->getARTState()->prevRegimenNum);
 					}
 				}

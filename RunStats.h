@@ -458,8 +458,8 @@ public:
 
 		//EID
 		/** Number of months spent false positive*/
-		int LMsFalsePositive;
-		int LMsFalsePositiveLinked;
+		double LMsFalsePositive;
+		double LMsFalsePositiveLinked;
 	};
 
 	/** SurvivalStats holds total survival statistics, used with different survival
@@ -1085,7 +1085,7 @@ public:
 		int numWithObservedCD4AtInitResp[SimContext::ART_NUM_LINES][SimContext::HET_NUM_OUTCOMES][SimContext::RESP_NUM_TYPES];
 		/** Total observed CD4 counts at ART initialization stratified by ART line */
 		double observedCD4AtInitSum[SimContext::ART_NUM_LINES];
-		/** Number of patients with observed CD4 (absolute CD4 metric) at ART intialization stratified by ART line */
+		/** Number of patients with observed CD4 (absolute CD4 metric) at ART initialization stratified by ART line */
 		int numWithObservedCD4AtInit[SimContext::ART_NUM_LINES];
 		/** Average observed CD4 counts at ART initialization stratified by ART line */
 		double observedCD4AtInitMean[SimContext::ART_NUM_LINES];

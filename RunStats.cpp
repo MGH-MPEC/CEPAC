@@ -2496,8 +2496,6 @@ void RunStats::writePopulationSummary() {
 	fprintf(statsFile, "%s)\n[Program version %s, build %s]", popSummary.runTime.c_str(),
 		CepacUtil::CEPAC_VERSION_STRING, CepacUtil::CEPAC_EXECUTABLE_COMPILED_DATE);
 
-
-
 	//Print out costs and LMs for multiple discount factors
 	if (simContext->getRunSpecsInputs()->enableMultipleDiscountRates){
 		for (i = 0; i < simContext->NUM_DISCOUNT_RATES; i++){
@@ -2588,7 +2586,7 @@ void RunStats::writeHIVScreening() {
 	fprintf(statsFile, "\t%lu\t%lu", hivScreening.numHIVExposed[SimContext::MOM_ACUTE_BREASTFEEDING], hivScreening.numNeverHIVExposed);
 
 	fprintf(statsFile, "\n\t\tFalse Positive\tFalse Positive Linked");
-	fprintf(statsFile, "\n\tLife Months\t%1lu\t%1lu", hivScreening.LMsFalsePositive, hivScreening.LMsFalsePositiveLinked);
+	fprintf(statsFile, "\n\tLife Months\t%1.0lf\t%1.0lf", hivScreening.LMsFalsePositive, hivScreening.LMsFalsePositiveLinked);
 
 	fprintf(statsFile, "\n\t");
 	for (i = 0; i < SimContext::HIV_EXT_INF_NUM; ++i)
@@ -4293,35 +4291,35 @@ void RunStats::writeTimeSummaries() {
 			fprintf(statsFile, "\t%1lu", currTime->numDeathsCare[j]);	
 		}
 
-		fprintf(statsFile, "\n\t%s", "HIV+onART");
+		fprintf(statsFile, "\n\tHIV+onART");
 		for (k = 0; k < SimContext::OUTPUT_AGE_CAT_NUM; k++)
 			fprintf(statsFile, "\t%1lu", currTime->numAgeBracketOnART[k]);
 		fprintf(statsFile, "\t%1lu", currTime->totalAliveOnART);	
-		fprintf(statsFile, "\n\t%s", "Num Deaths HIV+onART");
+		fprintf(statsFile, "\n\tNum Deaths HIV+onART");
 		for (k = 0; k < SimContext::OUTPUT_AGE_CAT_NUM; k++)
 			fprintf(statsFile, "\t%1lu", currTime->numDeathsAgeBracketOnART[k]);
 		fprintf(statsFile, "\t%1lu", currTime->totalDeathsOnART);	
-		fprintf(statsFile, "\n\t%s", "HIV+in_care_offART");
+		fprintf(statsFile, "\n\tHIV+in_care_offART");
 		for (k = 0; k < SimContext::OUTPUT_AGE_CAT_NUM; k++)
 			fprintf(statsFile, "\t%1lu", currTime->numAgeBracketInCareOffART[k]);
 		fprintf(statsFile, "\t%1lu", currTime->numAliveInCareOffART);	
-		fprintf(statsFile, "\n\t%s", "Num Deaths HIV+in_care_offART");
+		fprintf(statsFile, "\n\tNum Deaths HIV+in_care_offART");
 		for (k = 0; k < SimContext::OUTPUT_AGE_CAT_NUM; k++)
 			fprintf(statsFile, "\t%1lu", currTime->numDeathsAgeBracketInCareOffART[k]);	
 		fprintf(statsFile, "\t%1lu", currTime->numDeathsInCareOffART);	
-		fprintf(statsFile, "\n\t%s", "Total HIV+");
+		fprintf(statsFile, "\n\tTotal HIV+");
 		for (k = 0; k < SimContext::OUTPUT_AGE_CAT_NUM; k++)
 			fprintf(statsFile, "\t%1lu", currTime->numAgeBracketHIVPositive[k]);
 		fprintf(statsFile, "\t%1lu", currTime->numAlivePositive);	
-		fprintf(statsFile, "\n\t%s", "Num Deaths HIV+");
+		fprintf(statsFile, "\n\tNum Deaths HIV+");
 		for (k = 0; k < SimContext::OUTPUT_AGE_CAT_NUM; k++)
 			fprintf(statsFile, "\t%1lu", currTime->numDeathsAgeBracketHIVPositive[k]);	
 		fprintf(statsFile, "\t%1lu", currTime->numDeathsPositive);	
-		fprintf(statsFile, "\n\t%s", "Total Alive");
+		fprintf(statsFile, "\n\tTotal Alive");
 		for (k = 0; k < SimContext::OUTPUT_AGE_CAT_NUM; k++)
 			fprintf(statsFile, "\t%1lu", currTime->numAgeBracketAlive[k]);
 		fprintf(statsFile, "\t%1lu", currTime->numAlive);	
-		fprintf(statsFile, "\n\t%s", "Num Deaths");
+		fprintf(statsFile, "\n\tNum Deaths");
 		for (k = 0; k < SimContext::OUTPUT_AGE_CAT_NUM; k++)
 			fprintf(statsFile, "\t%1lu", currTime->numDeathsAgeBracket[k]);
 		fprintf(statsFile, "\t%1lu", currTime->numDeaths);		

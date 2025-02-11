@@ -22,7 +22,7 @@ void HIVInfectionUpdater::performInitialUpdates() {
 
 	bool isHighRisk = true;
 	setHIVIncReducMultiplier(1.0);
-	// Start with Pediatric intial breastfeeding, maternal, and HIV states if enabled
+	// Start with Pediatric initial breastfeeding, maternal, and HIV states if enabled
 	if (simContext->getPedsInputs()->enablePediatricsModel) {
 		/** For pediatrics: */
 		setInitialMaternalState();
@@ -204,7 +204,7 @@ void HIVInfectionUpdater::performInitialUpdates() {
 			/** - If patient was preset to not being a prevalent case (likely from transmission model) set them to HIV negative state */
 			if (patient->getGeneralState()->predefinedAgeAndGender && !patient->getDiseaseState()->isPrevalentHIVCase){
 				//Set non-prevalent cases to HIV Negative
-				infectedState = (SimContext::HIV_INF_NEG);
+				infectedState = SimContext::HIV_INF_NEG;
 			}
 		}
 		else {
@@ -1073,10 +1073,10 @@ void HIVInfectionUpdater::performAdolescentDiseaseUpdates() {
 				}
 				double responseStdDev;
 				double responseIncrRegimenMean;
-				SimContext::HET_ART_LOGIT_DISTRIBUTION responseDist = SimContext::HET_ART_LOGIT_DISTRIBUTION_NORMAL;
 				responseIncrRegimenMean = simContext->getAdolescentARTInputs(artLineNum)->propRespondARTRegimenLogitMean[ayaAgeCat+1];
 				responseStdDev = simContext->getAdolescentARTInputs(artLineNum)->propRespondARTRegimenLogitStdDev[ayaAgeCat+1];
 
+				// Currently, the logit adjustment distribution is SimContext::HET_ART_LOGIT_DISTRIBUTION_NORMAL for Adolescent and Pediatric patients
 				double responseLogitDraw = -1;
 				responseLogitDraw = CepacUtil::getRandomGaussian(responseIncrRegimenMean, responseStdDev, 60100, patient);
 

@@ -1098,7 +1098,7 @@ void SimContext::readLTFUInputs() {
 	readAndSkipPast( "RTCMaxTimePrevOnART", inputFile);
 	fscanf( inputFile, "%d", &ltfuInputs.maxMonthsAfterObservedFailureToRestartRegimen);
 	readAndSkipPast( "RTCProbTakeSameART", inputFile);
-	fscanf( inputFile, "%lf", &ltfuInputs.probRestartRegimenWithoutObsvervedFailure);
+	fscanf( inputFile, "%lf", &ltfuInputs.probRestartRegimenWithoutObservedFailure);
 	readAndSkipPast( "RTCRecheckARTPolicies", inputFile);
 	fscanf( inputFile, "%d", &tempBool);
 	ltfuInputs.recheckARTStartPoliciesAtRTC = (bool) tempBool;

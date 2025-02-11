@@ -456,4 +456,4 @@ bool DrugToxicityUpdater::evaluateARTToxDuration(const SimContext::ARTToxicityEf
 	if (duration == SimContext::ART_TOX_DUR_DEATH)
 		return true;
 	return false;
-} /* end evaluateDuration */
+} /* end evaluateARTToxDuration */

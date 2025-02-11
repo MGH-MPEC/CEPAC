@@ -62,16 +62,19 @@ class Patient;
 
 
 /** Include platform specific header files */
-#if defined(_LINUX)
-	#include <sys/io.h>
-#endif
-#if defined(_WIN32)
-	#include <io.h>
-	#include <direct.h>	//for _mkdir and _CHDIR
-#else
+#if defined(__linux__)
+	#include <unistd.h>
 	#include <sys/types.h>
 	#include <sys/stat.h>
 	//used to find files in a directory
 	#include <glob.h>
+#elif defined(_WIN32)
+	#include <io.h>
+	#include <direct.h>	//for _mkdir and _CHDIR
+#else //Mac
+	#include <unistd.h>
+	#include <sys/stat.h>
+	#include <glob.h>
+	#include <mach-o/dyld.h>
 #endif
 

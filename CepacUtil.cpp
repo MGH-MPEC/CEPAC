@@ -15,7 +15,7 @@ const char *CepacUtil::CEPAC_INPUT_VERSION = "20210615";
 /** CEPAC version string: the version label commonly used in CEPAC vernacular */
 const char *CepacUtil::CEPAC_VERSION_STRING = "50d";
 /** The compile date of the most recent release */
-const char *CepacUtil::CEPAC_EXECUTABLE_COMPILED_DATE = "2024-05-09";
+const char *CepacUtil::CEPAC_EXECUTABLE_COMPILED_DATE = "2025-01-09";
 /** .tmp */
 const char *CepacUtil::FILE_EXTENSION_FOR_TEMP = ".tmp";
 /** .txt */
@@ -45,16 +45,24 @@ bool CepacUtil::useRandomSeedByTime;
 /** \brief Random number generator class */
 MTRand CepacUtil::mtRand;
 
-/** \brief useCurrentDirectoryForInputs determines the current directory and sets as inputs directory */
+/** \brief useCurrentDirectoryForInputs determines the current directory and sets as inputs directory 
+ * Currently handles OS differences for Windows, Linux, and Apple
+*/
 void CepacUtil::useCurrentDirectoryForInputs() {
 #if defined(_WIN32)
 	char buffer[512];
 	_getcwd(buffer, 512);
 	inputsDirectory = buffer;
-#else
+#elif defined(__linux__)
 	char buffer[512];
 	getcwd(buffer, 512);
 	inputsDirectory = buffer;
+#else
+	char buffer[512];
+	uint32_t size = sizeof(buffer);
+	_NSGetExecutablePath(buffer, &size);
+	inputsDirectory = buffer;
+	inputsDirectory = inputsDirectory.substr(0, inputsDirectory.find_last_of("\\/"));
 #endif
 } /* end useCurrentDirectoryForInputs */
 

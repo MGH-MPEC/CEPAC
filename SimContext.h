@@ -531,8 +531,8 @@ public:
 		int testAssay;
 		/** whether this is normal test, first confirmatory test, or second confirmatory */
 		SimContext::EID_TEST_TYPE testType;
-		/** If this test was caused by an acute OI*/
-		bool triggeredByOI;
+		/** If this test was caused by an acute OI, the OI type that triggered it (OI_NONE if not triggered by OI)*/
+		OI_TYPE triggeredByOI;
 
 		/** result of the test */
 		//If this is for a scheduled EID test, result will not be used
@@ -911,7 +911,7 @@ public:
 		bool severeOIsRTC[OI_NUM];
 		//LTFU U30-U32 **/
 		int maxMonthsAfterObservedFailureToRestartRegimen;
-		double probRestartRegimenWithoutObsvervedFailure;
+		double probRestartRegimenWithoutObservedFailure;
 		bool recheckARTStartPoliciesAtRTC;
 		//LTFU Q37-Z44 **/
 		bool useProbSuppByPrevOutcome;
@@ -1665,6 +1665,7 @@ public:
 		double HIVTestNegativeCost[HIV_INF_NUM];
 		double HIVTestPositiveQOLModifier[HIV_INF_NUM];
 		double HIVTestNegativeQOLModifier[HIV_INF_NUM];
+		//HIV test perform cost is stratified by HIV_INF in the input file but expanded via copying the HIV negative cost upon reading into the model, for consistency with the initial cost
 		double HIVTestCost[HIV_EXT_INF_NUM];
 
 		//HIVTest AF38-AJ39

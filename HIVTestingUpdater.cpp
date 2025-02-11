@@ -662,7 +662,7 @@ void HIVTestingUpdater::performEIDScreeningUpdates() {
 	//if no test scheduled this visit, check if can make up previous visit tests
 	if ( assayNum == SimContext::NOT_APPL){
 		if (patient->getPedsState()->hasMissedEIDTest && reofferTest)
-			performEIDTest(patient->getPedsState()->missedEIDTestBaseAssay, patient->getPedsState()->missedEIDTestBaseAssay, SimContext::EID_TEST_TYPE_BASE, false, isNonMaternal);
+			performEIDTest(patient->getPedsState()->missedEIDTestBaseAssay, patient->getPedsState()->missedEIDTestBaseAssay, SimContext::EID_TEST_TYPE_BASE, SimContext::OI_NONE, isNonMaternal);
 		return;
 	}
 
@@ -688,7 +688,7 @@ void HIVTestingUpdater::performEIDScreeningUpdates() {
 				}
 			}
 			if(!testScheduled)
-				performEIDTest(mostRecentAssay, mostRecentTest.EIDFirstConfirmatoryTestAssay, SimContext::EID_TEST_TYPE_FIRST_CONF, false, isNonMaternal);
+				performEIDTest(mostRecentAssay, mostRecentTest.EIDFirstConfirmatoryTestAssay, SimContext::EID_TEST_TYPE_FIRST_CONF, SimContext::OI_NONE, isNonMaternal);
 		}
 		else if (mostRecentType == SimContext::EID_TEST_TYPE_FIRST_CONF && mostRecentTest.EIDSecondConfirmatoryTestAssay != SimContext::NOT_APPL){
 			if(patient->getPedsState()->eidScheduledConfirmatoryTests.size() > 0) {
@@ -702,16 +702,16 @@ void HIVTestingUpdater::performEIDScreeningUpdates() {
 				}
 			}
 			if(!testScheduled)
-				performEIDTest(mostRecentAssay, mostRecentTest.EIDSecondConfirmatoryTestAssay, SimContext::EID_TEST_TYPE_SECOND_CONF, false, isNonMaternal);
+				performEIDTest(mostRecentAssay, mostRecentTest.EIDSecondConfirmatoryTestAssay, SimContext::EID_TEST_TYPE_SECOND_CONF, SimContext::OI_NONE, isNonMaternal);
 		}
 		else{
 			//roll for linkage
-			rollForEIDLinkage(mostRecentAssay, false);
+			rollForEIDLinkage(mostRecentAssay, SimContext::OI_NONE);
 		}
 	}
 	else{
 		//do regular scheduled test
-		performEIDTest(assayNum, assayNum, SimContext::EID_TEST_TYPE_BASE, false, isNonMaternal);
+		performEIDTest(assayNum, assayNum, SimContext::EID_TEST_TYPE_BASE, SimContext::OI_NONE, isNonMaternal);
 	}
 }
 

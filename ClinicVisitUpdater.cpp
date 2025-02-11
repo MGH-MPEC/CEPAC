@@ -770,8 +770,19 @@ void ClinicVisitUpdater::performARTProgramUpdates() {
 		}
 
 		setCurrARTEfficacy(efficacy, true);
-		if (patient->getARTState()->isOnResupp)
-			setResuppEfficacy(efficacy);
+		// Update consecutive failed resupp attempts based on efficacy
+		if (patient->getARTState()->isOnResupp){
+			if(efficacy == SimContext::ART_EFF_FAILURE){
+				incrementARTFailedResupp();
+			}
+			else{
+				resetARTFailedResupp();
+			}
+		}
+		// Reset count if starting first ever regimen or switching to a new one
+		else if(!(rtcStart && currRegimen == patient->getARTState()->prevRegimenNum)){
+			resetARTFailedResupp();
+		}
 
 		/** Set the target HVL based on the destined efficacy */
 		if (efficacy == SimContext::ART_EFF_SUCCESS) {
@@ -1226,7 +1237,7 @@ SimContext::ART_FAIL_TYPE ClinicVisitUpdater::evaluateFailARTPolicyPeds() {
 	/** check for clinical (OI based) failure */
 	if (patient->getARTState()->numFailedOIs >= failART.OIsMinNum) {
 		if (failART.diagnoseUseHVLTestsConfirm) {
-			/** I using confirmatory HVL testing, also verify that this criteria has been met */
+			/** If using confirmatory HVL testing, also verify that this criteria has been met */
 			if (patient->getARTState()->numFailedHVLTests >= failART.diagnoseNumTestsConfirm)
 				return SimContext::ART_FAIL_CLINICAL;
 		}
@@ -1260,7 +1271,7 @@ SimContext::ART_FAIL_TYPE ClinicVisitUpdater::evaluateFailARTPolicyPeds() {
 	}
 
 	return SimContext::ART_FAIL_NOT_FAILED;
-} /* end evaluateFailARTPolicy */
+} /* end evaluateFailARTPolicyPeds */
 
 /** \brief evaluateStopARTPolicy determines if the stopping criteria for ART has been met
  *

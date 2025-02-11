@@ -140,14 +140,14 @@ protected:
 	void scheduleHVLTest(bool hasNext, int monthNum = 0);
 
 	/* performEIDTest handles doing an eid base test or confirmatory test*/
-	void performEIDTest(int baseAssay, int testAssay, SimContext::EID_TEST_TYPE testType, bool triggeredByOI, bool isNonMaternal);
+	void performEIDTest(int baseAssay, int testAssay, SimContext::EID_TEST_TYPE testType, SimContext::OI_TYPE triggeredByOI, bool isNonMaternal);
 	/* rollForEIDTestResult handles getting a result for eid tests*/
 	bool rollForEIDTestResult(int assayNum, SimContext::EID_TEST_TYPE testType);
 	/* rollForEIDLinkage handles linkage to care from EID */
-	void rollForEIDLinkage (int assayNum, bool triggeredByOI);
+	void rollForEIDLinkage (int assayNum, SimContext::OI_TYPE triggeredByOI);
 
 	/* addPendingResultEIDTest adds a result to the number of pending eid test results */
-	void addPendingResultEIDTest(int baseAssay, int testAssay, SimContext::EID_TEST_TYPE testType, bool result, int monthOfReturn, bool willBeReturnedToPatient, bool triggeredByOI);
+	void addPendingResultEIDTest(int baseAssay, int testAssay, SimContext::EID_TEST_TYPE testType, bool result, int monthOfReturn, bool willBeReturnedToPatient, SimContext::OI_TYPE triggeredByOI);
 	/* performEIDResultReturnUpdates processes the return of EID test results and rolls for linkage to care */
 	void performEIDResultReturnUpdates();
 	/* performEIDFirstConfirmatoryTests processes first confirmatory tests that are scheduled */
@@ -156,7 +156,7 @@ protected:
 	void performEIDSecondConfirmatoryTests();
 
 	/* scheduleEIDConfirmatoryTest schedules the next confirmatory test after a positive result for that line of EID tests */
-	void scheduleEIDConfirmatoryTest(int baseAssay, int testAssay, SimContext::EID_TEST_TYPE testType, int month, bool triggeredByOI);
+	void scheduleEIDConfirmatoryTest(int baseAssay, int testAssay, SimContext::EID_TEST_TYPE testType, int month, SimContext::OI_TYPE triggeredByOI);
 	/* setMostRecentPositiveEIDTest sets the most recent positive EID test result that did not link to care*/
 	void setMostRecentPositiveEIDTest(bool hasMostRecent, int baseAssay, SimContext::EID_TEST_TYPE testType);
 	/* setMostRecentNegativeEIDTest sets the most recent negative EID test result and the month of the test*/
@@ -223,8 +223,10 @@ protected:
 	void startNextARTSubRegimen(int nextSubRegimen);
 	/* setCurrARTEfficacy updates the destined efficacy of the ART regimen */
 	void setCurrARTEfficacy(SimContext::ART_EFF_TYPE efficacyType, bool isInitial);
-	/* setResuppEfficacy updates the efficacy each time a resuppression is attempted */
-	void setResuppEfficacy(SimContext::ART_EFF_TYPE efficacyType);
+	/* incrementARTFailedResupp increments the number of consecutive times the patient rolled for failure in a resuppression attempt */
+	void incrementARTFailedResupp();
+	/* resetARTFailedResupp resets to 0 the number of consecutive times the patient rolled for failure in a resuppression attempt */
+	void resetARTFailedResupp();
 	/* setCurrARTResponse sets the calculated ART propensity to respond and response type */
 	void setCurrARTResponse(double propRespond);
 	/* setTargetHVLStrata updates the target HVL while on ART or post ART */
