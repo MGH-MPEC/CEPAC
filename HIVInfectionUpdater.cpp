@@ -328,9 +328,9 @@ void HIVInfectionUpdater::performInitialUpdates() {
 	setTransmRiskCategory(transmRisk);
 
 	setInitialPrEPParams();
-	/** Roll for initially on PrEP */
+	/** Roll for initially on PrEP if age eligible */
 	if (patient->getDiseaseState()->infectedHIVState == SimContext::HIV_INF_NEG &&
-			simContext->getHIVTestInputs()->enableHIVTesting && simContext->getHIVTestInputs()->enablePrEP && !patient->getGeneralState()->isPediatric){
+			simContext->getHIVTestInputs()->enableHIVTesting && simContext->getHIVTestInputs()->enablePrEP && !patient->getGeneralState()->isPediatric && (simContext->getHIVTestInputs()->HIVRegularTestingStopAge == SimContext::NOT_APPL || patient->getGeneralState()->ageMonths <= simContext->getHIVTestInputs()->HIVRegularTestingStopAge)){
 		randNum =  CepacUtil::getRandomDouble(60055, patient);
 		SimContext::HIV_BEHAV risk = patient->getMonitoringState()->isHighRiskForHIV?SimContext::HIV_BEHAV_HI:SimContext::HIV_BEHAV_LO;
 		if (randNum < simContext->getHIVTestInputs()->PrEPInitialDistribution[risk]){
@@ -410,7 +410,8 @@ void HIVInfectionUpdater::performHIVNegativeUpdates() {
 		probPrEP = 1-pow(1-coverage,(pow(month+1,shape)-pow(month,shape))/pow(duration,shape));
 		//log probability of age-eligible patients joining
         updatePrEPProbLogging(probPrEP, risk);
-		if(!patient->getGeneralState()->isPediatric){
+		if(!patient->getGeneralState()->isPediatric && 
+		(simContext->getHIVTestInputs()->HIVRegularTestingStopAge == SimContext::NOT_APPL || patient->getGeneralState()->ageMonths <= simContext->getHIVTestInputs()->HIVRegularTestingStopAge)){
 			double randNum = CepacUtil::getRandomDouble(90060, patient);
 			if (randNum < probPrEP) {
 				setPrEP(true);
@@ -1211,7 +1212,7 @@ void HIVInfectionUpdater::performCD4EnvelopeAgeTransition(bool setOverallEnvelop
 		if (patient->getARTState()->isOnART && (patient->getARTState()->currRegimenEfficacy == SimContext::ART_EFF_SUCCESS) && (patient->getARTState()->currRegimenNum == patient->getARTState()->overallCD4Envelope.regimenNum) &&
 		(patient->getARTState()->monthOfCurrRegimenStart == patient->getARTState()->overallCD4Envelope.monthOfStart)) {
 			setCD4EnvelopeSlope(SimContext::ENVL_CD4_OVERALL, patient->getARTState()->currRegimenCD4Slope);
-	}
+		}
 		// Otherwise, they need a new slope
 		else{
 			int monthsSinceOverallEnv = patient->getGeneralState()->monthNum - patient->getARTState()->overallCD4Envelope.monthOfStart;
@@ -1220,7 +1221,7 @@ void HIVInfectionUpdater::performCD4EnvelopeAgeTransition(bool setOverallEnvelop
 			setCD4EnvelopeSlope(SimContext::ENVL_CD4_OVERALL, cd4Slope);
 		}	
 		// If the patient has only ever been successful on one ART regimen, the envelopes are identical, so we set the individual envelope slope to the newly updated overall one
-		if (overallEnvLineNum == indivEnvLineNum){
+		if (overallEnvLineNum == indivEnvLineNum && patient->getARTState()->overallCD4Envelope.monthOfStart == patient->getARTState()->indivCD4Envelope.monthOfStart){
 			setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, patient->getARTState()->overallCD4Envelope.slope);
 			// You've now updated both slopes, so return
 			return;

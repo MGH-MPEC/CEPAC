@@ -130,8 +130,8 @@ protected:
 	void setInitialPrEPParams();
 	/* updatePrEPProbLogging logs the monthly probability of PrEP uptake */
 	void updatePrEPProbLogging(double prepProb, SimContext::HIV_BEHAV risk);
-	/* setPrEP sets whether the patient is on PrEP and updates statistics about PrEP takeup and dropout */
-	void setPrEP(bool hasPrEP, bool isDropout = false);
+	/* setPrEP sets whether the patient is on PrEP and updates statistics about PrEP start and stop */
+	void setPrEP(bool hasPrEP, bool isDropout = false, bool isMaxAge = false);
 	/* scheduleHIVTest sets the month of the next HIV test */
 	void scheduleHIVTest(bool hasNext, int monthNum = 0);
 	/* scheduleCD4Test sets the month of the next CD4 test */
@@ -228,7 +228,7 @@ protected:
 	/* resetARTFailedResupp resets to 0 the number of consecutive times the patient rolled for failure in a resuppression attempt */
 	void resetARTFailedResupp();
 	/* setCurrARTResponse sets the calculated ART propensity to respond and response type */
-	void setCurrARTResponse(double propRespond);
+	void setCurrARTResponse(double propRespond, bool isNewARTLine = false);
 	/* setTargetHVLStrata updates the target HVL while on ART or post ART */
 	void setTargetHVLStrata(SimContext::HVL_STRATA targetHVL);
 	/* setPatientNatHistSlopePerc sets the natural history cd4 decline increment Perc*/
@@ -425,7 +425,7 @@ protected:
 	/* incrementCostsPrEP adds a PrEP cost to the patients total */
 	void incrementCostsPrEP(double cost, double percent);
 	/* finalizePrEPCostsByState adds the patient's final total for PrEP costs to the overall total for their PrEP state */
-	void finalizePrEPCostsByState(bool isPrEPDropout);
+	void finalizePrEPCostsByState();
 	/* incrementCostsHIVTest adds an HIV testing cost to the patients total */
 	void incrementCostsHIVTest(double cost);
 	/* incrementCostsHIVMisc adds an HIV misc related cost to the patients total */

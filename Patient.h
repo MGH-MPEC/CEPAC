@@ -285,7 +285,7 @@ public:
 		/** Month the patient linked into care*/
 		int monthOfLinkage;
 		SimContext::HIV_CARE careState;
-		/** True if the patient is high risk for HIV or HIV+, false if low risk (currently only will roll for a risk level if isPrevalentHIVCase = false; used to determine incidence prob and PrEP outcomes) - all Pediatric HIV-negative patients are high risk*/
+		/** True if the patient is initially HIV negative and at high risk for HIV, false if low risk (Note this is not initialised if isPrevalentHIVCase is true and the variable itself may be removed soon due to lack of data); all Pediatric patients who enter the model HIV-negative are high risk*/
 		bool isHighRiskForHIV;
 		/** The current HIV incidence reduction multiplier, to be applied to the patient's probability of HIV infection if enabled */
 		double HIVIncReducMultiplier;
@@ -375,6 +375,8 @@ public:
 		bool everPrEP;
 		/** True if the patient has dropped out of PrEP */
 		bool isPrEPDropout;
+		/** True if the patient stopped PrEP due to reaching the maximum age */
+		bool prepStoppedMaxAge;
 		/** Month Number in which the patient reaches the PrEP dropout threshold */
 		int PrEPDropoutThresholdMonth;
 	}; /* end MonitoringState */
@@ -537,7 +539,7 @@ public:
 		int numMonthsOnUnsuccessfulByRegimen[SimContext::ART_NUM_LINES];
 		/** An array of the number of months on unsuccessful ART stratified by HVL strata*/
 		int numMonthsOnUnsuccessfulByHVL[SimContext::HVL_NUM_STRATA];
-		/** A linked list of the active ART toxicity effects */
+		/** A linked list of the active ART toxicity effects - a list is used instead of a vector so that we can remove items while iterating through the list without having to restart the iteration */
 		list<SimContext::ARTToxicityEffect> activeToxicityEffects;
 		/** True if the patient has a major toxicity*/
 		bool hasMajorToxicity;

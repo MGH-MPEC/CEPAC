@@ -1,0 +1,30 @@
+# Compiled code #
+*.o
+*.exe
+
+# Code:Blocks stuff #
+*.cbp
+*.layout
+
+# Specifications #
+/spec/**
+
+# Tests #
+/test/**
+*.in_debug
+
+# Resources #
+/rsc/**
+
+# Excel #
+*.xls
+*.xlsx
+
+# IN/OUT #
+*.in
+*.out
+*.cout
+*.orph
+*.txt
+/results/**
+

@@ -314,7 +314,7 @@ void StateUpdater::setHIVIncReducMultiplier(double reducMult){
  *
  *	\param infectedState a SimContext::HIV_INF (HIV infection state) to set the patient to
  *	\param isInitial a bool marking whether or not this is an initial (i.e. prevalent) case or not (i.e. incident case)
- *  \param resetTimeOfInfection if infectedState is not negative, this bool marks whether the HIV infection occurred this month 
+ *  \param resetTimeOfInfection if infectedState is not negative, this bool marks whether the HIV infection occurred this month (not shifting between HIV+ states)
  *  \param isHighRisk a bool defaulting to true marking whether or not the patient is high risk; 
  * this only matters for people who start the model HIV-negative and draw from a different incident 
  * infection distribution/ PrEP inputs; others default to true
@@ -332,6 +332,7 @@ void StateUpdater::setInfectedHIVState(SimContext::HIV_INF infectedState, bool i
 		patient->diseaseState.monthOfAcuteToChronicHIV = patient->generalState.monthNum + simContext->getHIVTestInputs()->monthsFromAcuteToChronic;
 	}
 	if (isInitial) {
+		//Note that isHIghRiskForHIV is not valid for prevalent HIV cases
 		if (infectedState == SimContext::HIV_INF_NEG) {
 			patient->diseaseState.isPrevalentHIVCase = false;
 			patient->monitoringState.isHighRiskForHIV = isHighRisk;
@@ -364,6 +365,9 @@ void StateUpdater::setInfectedHIVState(SimContext::HIV_INF infectedState, bool i
 		}
 		else if(patient->monitoringState.isPrEPDropout){
 			runStats->hivScreening.numIncidentCasesByPrEPState[SimContext::HIV_POS_PREP_DROPOUT]++;
+		}
+		else if(patient->monitoringState.prepStoppedMaxAge){
+			runStats->hivScreening.numIncidentCasesByPrEPState[SimContext::HIV_POS_PREP_AGESTOP]++;
 		}
 		else{
 			runStats->hivScreening.numIncidentCasesByPrEPState[SimContext::HIV_POS_NEVER_PREP]++;
@@ -821,7 +825,7 @@ void StateUpdater::updateHIVTestingStats(bool acceptTest, bool returnResults, bo
 		return;
 	}
 	SimContext::HIV_EXT_INF infectedState;
-	if (!patient->monitoringState.isHighRiskForHIV && (patient->diseaseState.infectedHIVState == SimContext::HIV_INF_NEG)) {
+	if ((patient->diseaseState.infectedHIVState == SimContext::HIV_INF_NEG) && !patient->monitoringState.isHighRiskForHIV) {
 		infectedState = SimContext::HIV_EXT_INF_NEG_LO;
 	}
 	else {
@@ -924,13 +928,14 @@ void StateUpdater::setHIVTestingParams(int intervalIndex, int acceptanceProbInde
 } /* end setHIVTestingParams */
 
 
-/** \brief setPrEP sets whether the patient is on PrEP and updates statistics about PrEP takeup and dropout
+/** \brief setPrEP sets whether the patient is on PrEP and updates statistics about PrEP start and stop
  *
  * \param hasPrEP a bool representing if the patient is on PrEP
  * \param isDropout a bool defaulting to false indicating if the patient is dropping out of PrEP 
+ * \param isMaxAge a bool defaulting to false indicating if the patient is stopping due to age
  *
   **/
-void StateUpdater::setPrEP(bool hasPrEP, bool isDropout) {
+void StateUpdater::setPrEP(bool hasPrEP, bool isDropout, bool isMaxAge) {
 	patient->monitoringState.hasPrEP = hasPrEP;
 	if (hasPrEP){
 		patient->monitoringState.everPrEP = true;
@@ -945,6 +950,10 @@ void StateUpdater::setPrEP(bool hasPrEP, bool isDropout) {
 		patient->monitoringState.isPrEPDropout = true;
 		runStats->hivScreening.numDropoutPrEP++;
 	}
+	else if(isMaxAge){
+		patient->monitoringState.prepStoppedMaxAge = true;
+		runStats->hivScreening.numStopPrEPMaxAge++;
+	}
 } /* end setPrEP */
 
 /** \brief setInitialPrEPParams sets the initial PrEP parameters
@@ -954,6 +963,7 @@ void StateUpdater::setPrEP(bool hasPrEP, bool isDropout) {
 void StateUpdater::setInitialPrEPParams(){
 	patient->monitoringState.everPrEP = false;
 	patient->monitoringState.isPrEPDropout = false;
+	patient->monitoringState.prepStoppedMaxAge = false;
 } /* end setInitialPrEPParams */
 
 /** \brief updatePrEPProbLogging logs the monthly probability of PrEP uptake
@@ -1151,7 +1161,8 @@ bool StateUpdater::rollForEIDTestResult(int assayNum, SimContext::EID_TEST_TYPE 
 	int timeFromBirth = min(patient->generalState.ageMonths, SimContext::EID_TEST_AGE_CATEGORY_NUM-1);
 	SimContext::PEDS_HIV_STATE pedsHIVState = patient->diseaseState.infectedPediatricsHIVState;
 	bool testPositive;
-
+	runStats->hivScreening.numEIDTestsGivenType[testType]++;
+	runStats->hivScreening.numEIDTestsGivenTest[assayNum]++;
 	RunStats::TimeSummary *currTime = getTimeSummaryForUpdate();
 	if(currTime){
 		currTime->numEIDTestsGivenType[testType]++;
@@ -1221,6 +1232,16 @@ bool StateUpdater::rollForEIDTestResult(int assayNum, SimContext::EID_TEST_TYPE 
 		else
 			testPositive = false;
 
+		// Incrementing num EID true positives or false negatives for total and monthly runstats 
+		if (testPositive) {
+			runStats->hivScreening.numTruePositiveEIDTestResultsType[testType]++;
+			runStats->hivScreening.numTruePositiveEIDTestResultsTest[assayNum]++;
+		}
+		else{
+			runStats->hivScreening.numFalseNegativeEIDTestResultsType[testType]++;
+			runStats->hivScreening.numFalseNegativeEIDTestResultsTest[assayNum]++;
+		}
+
 		if(currTime){
 			if (testPositive){
 				currTime->numTruePositiveEIDTestResultsType[testType]++;
@@ -1281,6 +1302,17 @@ bool StateUpdater::rollForEIDTestResult(int assayNum, SimContext::EID_TEST_TYPE 
 			testPositive = false;
 		else
 			testPositive = true;
+		
+		// Incrementing num EID false positives or true negatives for total and monthly runstats
+		if (testPositive) {
+			runStats->hivScreening.numFalsePositiveEIDTestResultsType[testType]++;
+			runStats->hivScreening.numFalsePositiveEIDTestResultsTest[assayNum]++;
+		}
+		else {
+			runStats->hivScreening.numTrueNegativeEIDTestResultsType[testType]++;
+			runStats->hivScreening.numTrueNegativeEIDTestResultsTest[assayNum]++;
+		}
+
 		if(currTime){
 			if (testPositive){
 				currTime->numFalsePositiveEIDTestResultsType[testType]++;
@@ -1579,7 +1611,7 @@ void StateUpdater::performEIDSecondConfirmatoryTests(){
 
 } /* end performEIDSecondConfirmatoryTests */
 
-/** scheduleEIDConfirmatoryTest schedules the next confirmatory test after a positive result for that line of EID tests
+/** \brief scheduleEIDConfirmatoryTest schedules the next confirmatory test after a positive result for that line of EID tests
  *
  * \param baseAssay  is the index of the original non conf test that started the chain of tests (not the index of any of the conf tests)
  * \param testAssay is the index of the test result
@@ -1621,7 +1653,7 @@ void StateUpdater::setMostRecentPositiveEIDTest(bool hasMostRecent, int baseAssa
 		setMostRecentNegativeEIDTest(false);
 } /* end setMostRecentPositiveEIDTest */
 
-/** setMostRecentNegativeEIDTest sets the most recent negative EID test result and the month of the test
+/** \brief setMostRecentNegativeEIDTest sets the most recent negative EID test result and the month of the test
  *
  * \param hasMostRecent  is a boolean specifying whether a most recent test result exists
  **/
@@ -2125,8 +2157,12 @@ void StateUpdater::setCurrLTFUState(SimContext::LTFU_STATE ltfuState) {
 	patient->monitoringState.monthOfLTFUStateChange = patient->generalState.monthNum;
 	if (ltfuState == SimContext::LTFU_STATE_LOST) {
 		setCareState(SimContext::HIV_CARE_LTFU);
-		if (patient->artState.isOnART)
+		if (patient->artState.isOnART){
 			patient->monitoringState.wasOnARTWhenLostToFollowUp = true;
+			// Deactivate individual regimen CD4 envelope since this is a break from the regimen
+			patient->artState.indivCD4Envelope.isActive = false;
+			patient->artState.indivCD4PercentageEnvelope.isActive = false;
+		}
 		else
 			patient->monitoringState.wasOnARTWhenLostToFollowUp = false;
 	}
@@ -2263,10 +2299,6 @@ void StateUpdater::startNextARTRegimen(bool isResupp) {
 			runStats->artStats.numWithObservedCD4AtARTEverInit[artLineNum]++;
 			runStats->artStats.observedCD4AtARTEverInitSum[artLineNum] += patient->monitoringState.currObservedCD4;
 		}
-		double responseLogit = patient->artState.responseLogitCurrRegimen;
-		double propRespond = pow(1 + exp(0 - responseLogit), -1);
-		runStats->artStats.propensityAtARTEverInitSum[artLineNum]+= propRespond;
-
 		patient->artState.hasTakenARTRegimen[patient->artState.currRegimenNum] = true;
 	}
 } /* end startNextARTRegimen */
@@ -2430,12 +2462,17 @@ void StateUpdater::resetARTFailedResupp() {
  *	this value is 0 if the response=L1 and 1 if response=L2
  *
  * \param propRespond a double indicating the propensity to respond
+ * \param isNewARTLine a bool defaulting to false. True if the function is being called when starting the ART line for the first time (for calculating "EverInit" outputs)
  **/
-void StateUpdater::setCurrARTResponse(double responseLogit) {
+void StateUpdater::setCurrARTResponse(double responseLogit, bool isNewARTLine) {
 	// Update the patient state with the propensity to respond and response type
 	double propRespond = pow(1 + exp(0 - responseLogit), -1);
 	int artLineNum = patient->artState.currRegimenNum;
 	patient->artState.responseLogitCurrRegimen=responseLogit;
+	if(isNewARTLine){
+		runStats->artStats.propensityAtARTEverInitSum[artLineNum]+= propRespond;
+	}
+	
 	// Print information to trace file if enabled
 	if (patient->generalState.tracingEnabled) {
 		tracer->printTrace(1, "**%d ART %d Propensity to Respond:%f, Logit Value of Propensity to Respond %f;\n",
@@ -2862,6 +2899,7 @@ void StateUpdater::setARTToxicity(const SimContext::ARTToxicityEffect &toxEffect
 			patient->artState.hasSevereToxicity = true;
 			patient->artState.severeToxicityEffect = &toxEffect;
 		}
+		// If the patient already haa a severe toxicity, compare the severity of the new severe toxicity to the old severe toxicity - save the more severe one
 		else {
 			const SimContext::ARTToxicityEffect *severeToxEffect = patient->artState.severeToxicityEffect;
 			const SimContext::ARTInputs::ARTToxicity &severeToxInputs = simContext->getARTInputs(severeToxEffect->ARTRegimenNum)->toxicity[severeToxEffect->ARTSubRegimenNum][severeToxEffect->toxSeverityType][severeToxEffect->toxNum];
@@ -5147,10 +5185,6 @@ void StateUpdater::setTrueCD4(double newCD4, bool isInitial) {
 	if (patient->diseaseState.currTrueCD4 < 0.0) {
 		patient->diseaseState.currTrueCD4 = 0.0;
 	}
-	else if ((simContext->getRunSpecsInputs()->maxPatientCD4 != SimContext::NOT_APPL) &&
-		(patient->diseaseState.currTrueCD4 > simContext->getRunSpecsInputs()->maxPatientCD4)) {
-			patient->diseaseState.currTrueCD4 = simContext->getRunSpecsInputs()->maxPatientCD4;
-	}
 	// the CD4 envelopes are only activated if the CD4 envelope is enabled in RunSpecs F10, after an initial success on ART - see ClinicVisitUpdater::performARTProgramUpdates()
 	else {
 		if (!isInitial && patient->artState.overallCD4Envelope.isActive &&
@@ -5161,6 +5195,10 @@ void StateUpdater::setTrueCD4(double newCD4, bool isInitial) {
 		(patient->diseaseState.currTrueCD4 > patient->artState.indivCD4Envelope.value)) {
 			patient->diseaseState.currTrueCD4 = patient->artState.indivCD4Envelope.value;
 		}
+	}
+	if ((simContext->getRunSpecsInputs()->maxPatientCD4 != SimContext::NOT_APPL) &&
+		(patient->diseaseState.currTrueCD4 > simContext->getRunSpecsInputs()->maxPatientCD4)) {
+			patient->diseaseState.currTrueCD4 = simContext->getRunSpecsInputs()->maxPatientCD4;
 	}
 
 	// update the true CD4 strata
@@ -5189,11 +5227,6 @@ void StateUpdater::setTrueCD4Percentage(double newCD4Perc, bool isInitial) {
 	patient->diseaseState.currTrueCD4Percentage = newCD4Perc;
 	if (patient->diseaseState.currTrueCD4Percentage < 0)
 		patient->diseaseState.currTrueCD4Percentage = 0;
-	else if (patient->diseaseState.currTrueCD4Percentage > maxCD4Perc)
-		patient->diseaseState.currTrueCD4Percentage = maxCD4Perc;
-	else if (patient->diseaseState.currTrueCD4Percentage > 1)
-		patient->diseaseState.currTrueCD4Percentage = 1;
-	// the CD4 percentage envelopes are only activated if the CD4 envelope is enabled in RunSpecs F10, after an initial success on ART - see ClinicVisitUpdater::performARTProgramUpdates()	
 	else {
 		if (!isInitial && patient->artState.overallCD4PercentageEnvelope.isActive &&
 				(patient->diseaseState.currTrueCD4Percentage > patient->artState.overallCD4PercentageEnvelope.value)) {
@@ -5203,6 +5236,10 @@ void StateUpdater::setTrueCD4Percentage(double newCD4Perc, bool isInitial) {
 				(patient->diseaseState.currTrueCD4Percentage > patient->artState.indivCD4PercentageEnvelope.value)) {
 			patient->diseaseState.currTrueCD4Percentage = patient->artState.indivCD4PercentageEnvelope.value;
 		}
+		if (patient->diseaseState.currTrueCD4Percentage > maxCD4Perc)
+			patient->diseaseState.currTrueCD4Percentage = maxCD4Perc;
+		if (patient->diseaseState.currTrueCD4Percentage > 1)
+			patient->diseaseState.currTrueCD4Percentage = 1;
 	}
 
 	// update the true CD4 percentage strata
@@ -5476,6 +5513,8 @@ void StateUpdater::incrementNumLabStagingTests() {
  **/
 void StateUpdater::incrementCostsPrEP(double cost, double percent) {
 	runStats->overallCosts.costsPrEP += cost * patient->generalState.discountFactor;
+	runStats->overallCosts.costsDrugs += cost;
+	runStats->overallCosts.costsDrugsDiscounted += cost * patient->generalState.discountFactor;
 	patient->monitoringState.costsPrEP += cost * patient->generalState.discountFactor;
 
 	RunStats::TimeSummary *currTime = getTimeSummaryForUpdate();
@@ -5486,15 +5525,17 @@ void StateUpdater::incrementCostsPrEP(double cost, double percent) {
 } /* end incrementCostsPrEP */
 
 /** \brief finalizePrEPCostsByState adds the final total for PrEP costs to the overall total for the patient's PrEP state 
- * \param isPrEPDropout a bool indicating whether the patient is a PrEP dropout, used to count costs for those infected with HIV after dropping out 
  * 
  **/
-void StateUpdater::finalizePrEPCostsByState(bool isPrEPDropout){
+void StateUpdater::finalizePrEPCostsByState(){
 	if(patient->diseaseState.infectedHIVState == SimContext::HIV_INF_NEG){
 		runStats->overallCosts.costsPrEPNeverHIV += patient->monitoringState.costsPrEP;
 	}
-	else if(isPrEPDropout){
+	else if(patient->monitoringState.isPrEPDropout){
 		runStats->overallCosts.costsPrEPHIVPos[SimContext::HIV_POS_PREP_DROPOUT] += patient->monitoringState.costsPrEP;
+	}
+	else if(patient->monitoringState.prepStoppedMaxAge){
+		runStats->overallCosts.costsPrEPHIVPos[SimContext::HIV_POS_PREP_AGESTOP] += patient->monitoringState.costsPrEP;
 	}	
 	else {
 		runStats->overallCosts.costsPrEPHIVPos[SimContext::HIV_POS_ON_PREP] += patient->monitoringState.costsPrEP;
@@ -5648,6 +5689,9 @@ void StateUpdater::incrementCostsEIDTest(double cost) {
  **/
 void StateUpdater::incrementCostsInfantHIVProphDirect(double cost) {
 	runStats->overallCosts.costsInfantHIVProph += cost * patient->generalState.discountFactor;
+	runStats->overallCosts.costsDrugs += cost;
+	runStats->overallCosts.costsDrugsDiscounted += cost * patient->generalState.discountFactor;
+
 	RunStats::TimeSummary *currTime = getTimeSummaryForUpdate();
 	if (currTime) {
 		currTime->costsInfantHIVProphDirect += cost * patient->generalState.discountFactor;

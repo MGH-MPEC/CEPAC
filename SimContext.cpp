@@ -348,7 +348,7 @@ void SimContext::readOutputInputs() {
 
 	readAndSkipPast("NumPatientsToTrace", inputFile);
 	fscanf(inputFile, "%d", &(outputInputs.traceNumSelection));
-	numPatientsToTrace = min(outputInputs.traceNumSelection, numPatientsToTrace);
+	numPatientsToTrace = min(outputInputs.traceNumSelection, MAX_NUM_TRACES);
 	//read in sub cohort parameters
 	readAndSkipPast("EnableSubCohorts", inputFile);
 	fscanf(inputFile, "%d", &tempBool);

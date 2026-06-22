@@ -131,7 +131,7 @@ void HIVTestingUpdater::setSimContext(SimContext *newSimContext){
 			/** Set the HIV testing acceptance probability */
 			randNum = CepacUtil::getRandomDouble(100030, patient);
 			SimContext::HIV_EXT_INF extInfectedState;
-			if (!patient->getMonitoringState()->isHighRiskForHIV && (patient->getDiseaseState()->infectedHIVState == SimContext::HIV_INF_NEG)) {
+			if ((patient->getDiseaseState()->infectedHIVState == SimContext::HIV_INF_NEG) && !patient->getMonitoringState()->isHighRiskForHIV) {
 				extInfectedState = SimContext::HIV_EXT_INF_NEG_LO;
 			}
 			else {
@@ -239,7 +239,7 @@ void HIVTestingUpdater::initRegularScreening(bool atInit){
 	/** Determine their HIV testing acceptance probability for the run now */
 	randNum = CepacUtil::getRandomDouble(100030, patient);
 	SimContext::HIV_EXT_INF extInfectedState;
-	if (!patient->getMonitoringState()->isHighRiskForHIV && (patient->getDiseaseState()->infectedHIVState == SimContext::HIV_INF_NEG)) {
+	if ((patient->getDiseaseState()->infectedHIVState == SimContext::HIV_INF_NEG) && !patient->getMonitoringState()->isHighRiskForHIV) {
 		extInfectedState = SimContext::HIV_EXT_INF_NEG_LO;
 	}
 	else {
@@ -260,18 +260,33 @@ void HIVTestingUpdater::initRegularScreening(bool atInit){
 /** \brief performRegularScreeningUpdates determines if a screening occurs, if its accepted, if
 	they are detected, and updates the associated state and statistics */
 void HIVTestingUpdater::performRegularScreeningUpdates() {
+	/** Check if patient is too old to get regular testing */
+	if(patient->getMonitoringState()->hasScheduledHIVTest && simContext->getHIVTestInputs()->HIVRegularTestingStopAge >= 0){
+		if (patient->getGeneralState()->ageMonths >= simContext->getHIVTestInputs()->HIVRegularTestingStopAge){
+			scheduleHIVTest(false, SimContext::NOT_APPL);
+			if (patient->getGeneralState()->tracingEnabled) {
+				tracer->printTrace(1, "**%d HIV SCREENING STOP, NOT AGE ELGIBLE;\n",
+					patient->getGeneralState()->monthNum);
+			}
+		}
+		if (patient->getGeneralState()->ageMonths == simContext->getHIVTestInputs()->HIVRegularTestingStopAge){
+			if (patient->getMonitoringState()->hasPrEP){
+				setPrEP(false, false, true);
+				if (patient->getGeneralState()->tracingEnabled){
+					tracer->printTrace(1, "**%d STOP PrEP;\n", patient->getGeneralState()->monthNum);
+				}
+			}
+		}
+	} 
 	/** Return if this is not the month of the next test */
 	if (!patient->getMonitoringState()->hasScheduledHIVTest ||
-		(patient->getGeneralState()->monthNum < patient->getMonitoringState()->monthOfScheduledHIVTest))
+		(patient->getGeneralState()->monthNum < patient->getMonitoringState()->monthOfScheduledHIVTest)){
 			return;
-	/** Return if patient is too old to get regular testing */
-	if(simContext->getHIVTestInputs()->HIVRegularTestingStopAge >= 0 &&
-			patient->getGeneralState()->ageMonths >= simContext->getHIVTestInputs()->HIVRegularTestingStopAge)
-		return;
+	}
 
 	SimContext::HIV_INF infectedState = patient->getDiseaseState()->infectedHIVState;
 	SimContext::HIV_EXT_INF extInfectedState;
-	if (!patient->getMonitoringState()->isHighRiskForHIV && (infectedState == SimContext::HIV_INF_NEG)) {
+		if ((infectedState == SimContext::HIV_INF_NEG) && !patient->getMonitoringState()->isHighRiskForHIV) {
 		extInfectedState = SimContext::HIV_EXT_INF_NEG_LO;
 	}
 	else {
@@ -406,7 +421,7 @@ void HIVTestingUpdater::performBackgroundScreeningUpdates() {
 
 	SimContext::HIV_INF infectedState = patient->getDiseaseState()->infectedHIVState;
 	SimContext::HIV_EXT_INF extInfectedState;
-	if (!patient->getMonitoringState()->isHighRiskForHIV && (infectedState == SimContext::HIV_INF_NEG)) {
+	if ((infectedState == SimContext::HIV_INF_NEG) && !patient->getMonitoringState()->isHighRiskForHIV) {
 		extInfectedState = SimContext::HIV_EXT_INF_NEG_LO;
 	}
 	else {

@@ -460,9 +460,9 @@ public:
 	enum HIV_CARE {HIV_CARE_NEG, HIV_CARE_UNDETECTED, HIV_CARE_UNLINKED, HIV_CARE_IN_CARE, HIV_CARE_LTFU, HIV_CARE_RTC};
 
 	/** Size of SimContext::HIV_POS_PREP_STATE  */
-	static const int HIV_POS_PREP_STATES_NUM = 3;
+	static const int HIV_POS_PREP_STATES_NUM = 4;
 	/** An enum of the different PrEP states for HIV positive patients */
-	enum HIV_POS_PREP_STATE { HIV_POS_ON_PREP, HIV_POS_PREP_DROPOUT, HIV_POS_NEVER_PREP};
+	enum HIV_POS_PREP_STATE { HIV_POS_ON_PREP, HIV_POS_PREP_DROPOUT, HIV_POS_PREP_AGESTOP, HIV_POS_NEVER_PREP};
 	/** Size of SimContext::EVER_PREP */
 	static const int EVER_PREP_NUM = 2;
 	/** An enum of the possible states for whether a patient has ever had PrEP */

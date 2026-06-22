@@ -166,7 +166,7 @@ void DrugEfficacyUpdater::performARTEfficacyUpdates() {
 	}
 
 	/** If this is the patient's initial suppression on the current regimen
-	//	and it is within the efficacy time horizon, do not roll for any late transitions */
+	//	and it is within the efficacy time horizon, do not roll for any late failure transitions */
 	if (patient->getGeneralState()->isAdolescent){
 		int efficacyHorizon=ayaART->efficacyTimeHorizon[ayaAgeCat];
 
@@ -248,6 +248,16 @@ void DrugEfficacyUpdater::performARTEnvelopeEfficacyUpdates() {
 		int monthsSinceOverallEnv = patient->getGeneralState()->monthNum - monthOverallEnvStart;
 		bool hasIndivEnv = patient->getARTState()->indivCD4Envelope.isActive;
 		int indivEnvLineNum = patient->getARTState()->indivCD4Envelope.regimenNum;
+		bool everResetIndivEnv = false;
+		if(hasIndivEnv){
+			if(overallEnvLineNum != indivEnvLineNum){
+				everResetIndivEnv = true;
+			}
+			else if (monthOverallEnvStart != patient->getARTState()->indivCD4Envelope.monthOfStart){
+				everResetIndivEnv = true;
+			}
+		} 
+		
 		const SimContext::AdolescentARTInputs *ayaART = simContext->getAdolescentARTInputs(overallEnvLineNum);
 		int ayaARTAgeCat = getAgeCategoryAdolescentART(overallEnvLineNum);
 
@@ -260,24 +270,25 @@ void DrugEfficacyUpdater::performARTEnvelopeEfficacyUpdates() {
 					(patient->getARTState()->currRegimenNum == overallEnvLineNum) &&
 					(patient->getARTState()->monthOfCurrRegimenStart == monthOverallEnvStart)) {
 						setCD4EnvelopeSlope(SimContext::ENVL_CD4_OVERALL, patient->getARTState()->currRegimenCD4Slope);
-						if (hasIndivEnv && (overallEnvLineNum == indivEnvLineNum))
-							setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, patient->getARTState()->currRegimenCD4Slope);
+						// If the start month of the overall envelope equals the current regimen start month, they should never have failed or been LTFU since starting this line and therefore they should have an individual envelope with the same line number
+						assert(hasIndivEnv && !everResetIndivEnv);
+						setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, patient->getARTState()->currRegimenCD4Slope);
 				}
 				else {
-					/** Otherwise, draw for a new CD4 envelope slope */
+					/** Otherwise, draw for a new overall CD4 envelope slope */
 					double cd4SlopeMean = ayaART->CD4ChangeOnSuppARTMean[i + 1][ayaARTAgeCat];
 					double cd4SlopeStdDev = ayaART->CD4ChangeOnSuppARTStdDev[i + 1][ayaARTAgeCat];
 					double cd4Slope = CepacUtil::getRandomGaussian(cd4SlopeMean, cd4SlopeStdDev, 70050, patient);
 
 					setCD4EnvelopeSlope(SimContext::ENVL_CD4_OVERALL, cd4Slope);
-					if (hasIndivEnv && (overallEnvLineNum == indivEnvLineNum))
+					if (hasIndivEnv && !everResetIndivEnv)
 						setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, cd4Slope);
 				}
 			}
 		}
 
 		/** Update the individual regimen CD4 envelope */
-		if (hasIndivEnv && (indivEnvLineNum != overallEnvLineNum)) {
+		if (hasIndivEnv && everResetIndivEnv) {
 			int monthIndivEnvStart = patient->getARTState()->indivCD4Envelope.monthOfStart;
 			int monthsSinceIndivEnv = patient->getGeneralState()->monthNum - monthIndivEnvStart;
 			/** Check if patient has reached the next CD4 envelope slope time segment, if so redraw slope */
@@ -311,6 +322,15 @@ void DrugEfficacyUpdater::performARTEnvelopeEfficacyUpdates() {
 		int monthsSinceOverallEnv = patient->getGeneralState()->monthNum - monthOverallEnvStart;
 		bool hasIndivEnv = patient->getARTState()->indivCD4Envelope.isActive;
 		int indivEnvLineNum = patient->getARTState()->indivCD4Envelope.regimenNum;
+		bool everResetIndivEnv = false;
+		if(hasIndivEnv){
+			if(overallEnvLineNum != indivEnvLineNum){
+				everResetIndivEnv = true;
+			}
+			else if (monthOverallEnvStart != patient->getARTState()->indivCD4Envelope.monthOfStart){
+				everResetIndivEnv = true;
+			}
+		} 
 		const SimContext::ARTInputs *artInputs = simContext->getARTInputs(overallEnvLineNum);
 		for (int i = 0; i < 2; i++) {
 			if (monthsSinceOverallEnv == artInputs->stageBoundsCD4ChangeOnSuppART[i]) {
@@ -321,8 +341,8 @@ void DrugEfficacyUpdater::performARTEnvelopeEfficacyUpdates() {
 					(patient->getARTState()->currRegimenNum == overallEnvLineNum) &&
 					(patient->getARTState()->monthOfCurrRegimenStart == monthOverallEnvStart)) {
 						setCD4EnvelopeSlope(SimContext::ENVL_CD4_OVERALL, patient->getARTState()->currRegimenCD4Slope);
-						if (hasIndivEnv && (overallEnvLineNum == indivEnvLineNum))
-							setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, patient->getARTState()->currRegimenCD4Slope);
+						assert(hasIndivEnv && !everResetIndivEnv);
+						setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, patient->getARTState()->currRegimenCD4Slope);
 				}
 				else {
 					/** Otherwise, draw for a new CD4 envelope slope */
@@ -332,14 +352,14 @@ void DrugEfficacyUpdater::performARTEnvelopeEfficacyUpdates() {
 					double cd4Slope = CepacUtil::getRandomGaussian(cd4SlopeMean, cd4SlopeStdDev, 70050, patient);
 
 					setCD4EnvelopeSlope(SimContext::ENVL_CD4_OVERALL, cd4Slope);
-					if (hasIndivEnv && (overallEnvLineNum == indivEnvLineNum))
+					if (hasIndivEnv && !everResetIndivEnv)
 						setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, cd4Slope);
 				}
 			}
 		}
 
 		/** Update the individual regimen CD4 envelope */
-		if (hasIndivEnv && (indivEnvLineNum != overallEnvLineNum)) {
+		if (hasIndivEnv && everResetIndivEnv) {
 			int monthIndivEnvStart = patient->getARTState()->indivCD4Envelope.monthOfStart;
 			int monthsSinceIndivEnv = patient->getGeneralState()->monthNum - monthIndivEnvStart;
 			/** Check if patient has reached the next CD4 envelope slope time segment, if so redraw slope */
@@ -374,6 +394,15 @@ void DrugEfficacyUpdater::performARTEnvelopeEfficacyUpdates() {
 		int monthsSinceOverallEnv = patient->getGeneralState()->monthNum - monthOverallEnvStart;
 		bool hasIndivEnv = patient->getARTState()->indivCD4Envelope.isActive;
 		int indivEnvLineNum = patient->getARTState()->indivCD4Envelope.regimenNum;
+		bool everResetIndivEnv = false;
+		if(hasIndivEnv){
+			if(overallEnvLineNum != indivEnvLineNum){
+				everResetIndivEnv = true;
+			}
+			else if (monthOverallEnvStart != patient->getARTState()->indivCD4Envelope.monthOfStart){
+				everResetIndivEnv = true;
+			}
+		} 
 
 		const SimContext::PedsARTInputs *pedsART = simContext->getPedsARTInputs(overallEnvLineNum);
 		for (int i = 0; i < 2; i++) {
@@ -385,8 +414,8 @@ void DrugEfficacyUpdater::performARTEnvelopeEfficacyUpdates() {
 					(patient->getARTState()->currRegimenNum == overallEnvLineNum) &&
 					(patient->getARTState()->monthOfCurrRegimenStart == monthOverallEnvStart)) {
 						setCD4EnvelopeSlope(SimContext::ENVL_CD4_OVERALL, patient->getARTState()->currRegimenCD4Slope);
-						if (hasIndivEnv && (overallEnvLineNum == indivEnvLineNum))
-							setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, patient->getARTState()->currRegimenCD4Slope);
+						assert(hasIndivEnv && !everResetIndivEnv);
+						setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, patient->getARTState()->currRegimenCD4Slope);
 				}
 				else {
 					// Otherwise, draw for a new CD4 envelope slope
@@ -396,14 +425,14 @@ void DrugEfficacyUpdater::performARTEnvelopeEfficacyUpdates() {
 					double cd4Slope = CepacUtil::getRandomGaussian(cd4SlopeMean, cd4SlopeStdDev, 70052, patient);
 
 					setCD4EnvelopeSlope(SimContext::ENVL_CD4_OVERALL, cd4Slope);
-					if (hasIndivEnv && (overallEnvLineNum == indivEnvLineNum))
+					if (hasIndivEnv && !everResetIndivEnv)
 						setCD4EnvelopeSlope(SimContext::ENVL_CD4_INDIV, cd4Slope);
 				}
 			}
 		}
 
 		// Update the individual regimen CD4 envelope
-		if (hasIndivEnv && (indivEnvLineNum != overallEnvLineNum)) {
+		if (hasIndivEnv && everResetIndivEnv) {
 			int monthIndivEnvStart = patient->getARTState()->indivCD4Envelope.monthOfStart;
 			int monthsSinceIndivEnv = patient->getGeneralState()->monthNum - monthIndivEnvStart;
 			// Check if patient has reached the next CD4 envelope slope time segment, if so redraw slope
@@ -440,6 +469,15 @@ void DrugEfficacyUpdater::performARTEnvelopeEfficacyUpdates() {
 		int monthsSinceOverallEnv = patient->getGeneralState()->monthNum - monthOverallEnvStart;
 		bool hasIndivEnv = patient->getARTState()->indivCD4PercentageEnvelope.isActive;
 		int indivEnvLineNum = patient->getARTState()->indivCD4PercentageEnvelope.regimenNum;
+		bool everResetIndivEnv = false;
+		if(hasIndivEnv){
+			if(overallEnvLineNum != indivEnvLineNum){
+				everResetIndivEnv = true;
+			}
+			else if (monthOverallEnvStart != patient->getARTState()->indivCD4PercentageEnvelope.monthOfStart){
+				everResetIndivEnv = true;
+			}
+		} 
 		const SimContext::PedsARTInputs *pedsART = simContext->getPedsARTInputs(overallEnvLineNum);
 		for (int i = 0; i < 2; i++) {
 			if (monthsSinceOverallEnv == pedsART->stageBoundsCD4PercentageChangeOnSuppARTEarly[i]) {
@@ -450,8 +488,8 @@ void DrugEfficacyUpdater::performARTEnvelopeEfficacyUpdates() {
 					(patient->getARTState()->currRegimenNum == overallEnvLineNum) &&
 					(patient->getARTState()->monthOfCurrRegimenStart == monthOverallEnvStart)) {
 						setCD4EnvelopeSlope(SimContext::ENVL_CD4_PERC_OVERALL, patient->getARTState()->currRegimenCD4PercentageSlope);
-						if (hasIndivEnv && (overallEnvLineNum == indivEnvLineNum))
-							setCD4EnvelopeSlope(SimContext::ENVL_CD4_PERC_INDIV, patient->getARTState()->currRegimenCD4PercentageSlope);
+						assert(hasIndivEnv && !everResetIndivEnv);
+						setCD4EnvelopeSlope(SimContext::ENVL_CD4_PERC_INDIV, patient->getARTState()->currRegimenCD4PercentageSlope);
 				}
 				else {
 					// Otherwise, draw for a new CD4 envelope slope
@@ -461,14 +499,14 @@ void DrugEfficacyUpdater::performARTEnvelopeEfficacyUpdates() {
 					double cd4PercSlope = CepacUtil::getRandomGaussian(cd4PercSlopeMean, cd4PercSlopeStdDev, 70054, patient);
 
 					setCD4EnvelopeSlope(SimContext::ENVL_CD4_PERC_OVERALL, cd4PercSlope);
-					if (hasIndivEnv && (overallEnvLineNum == indivEnvLineNum))
+					if (hasIndivEnv && !everResetIndivEnv)
 						setCD4EnvelopeSlope(SimContext::ENVL_CD4_PERC_INDIV, cd4PercSlope);
 				}
 			}
 		}
 
 		// Update the individual regimen CD4 envelope
-		if (hasIndivEnv && (indivEnvLineNum != overallEnvLineNum)) {
+		if (hasIndivEnv && everResetIndivEnv) {
 			int monthIndivEnvStart = patient->getARTState()->indivCD4PercentageEnvelope.monthOfStart;
 			int monthsSinceIndivEnv = patient->getGeneralState()->monthNum - monthIndivEnvStart;
 			// Check if patient has reached the next CD4 envelope slope time segment, if so redraw slope

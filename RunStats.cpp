@@ -405,6 +405,23 @@ void RunStats::initHIVScreening() {
 
 	hivScreening.numEverPrEP = 0;
 	hivScreening.numDropoutPrEP = 0;
+	hivScreening.numStopPrEPMaxAge = 0;
+
+	for (int i = 0; i < SimContext::EID_TEST_TYPE_NUM; i++) {
+		hivScreening.numEIDTestsGivenType[i] = 0;
+		hivScreening.numTruePositiveEIDTestResultsType[i] = 0;
+		hivScreening.numTrueNegativeEIDTestResultsType[i] = 0;
+		hivScreening.numFalsePositiveEIDTestResultsType[i] = 0;
+		hivScreening.numFalseNegativeEIDTestResultsType[i] = 0;
+	}
+	for (int i = 0; i < SimContext::EID_NUM_TESTS; i++) {
+		hivScreening.numEIDTestsGivenTest[i] = 0;
+		hivScreening.numTruePositiveEIDTestResultsTest[i] = 0;
+		hivScreening.numTrueNegativeEIDTestResultsTest[i] = 0;
+		hivScreening.numFalsePositiveEIDTestResultsTest[i] = 0;
+		hivScreening.numFalseNegativeEIDTestResultsTest[i] = 0;
+	}
+	
 
 	hivScreening.LMsFalsePositive = 0;
 	hivScreening.LMsFalsePositiveLinked = 0;
@@ -2561,14 +2578,20 @@ void RunStats::writeHIVScreening() {
 	fprintf(statsFile, "\n\tHIV+ Cases (Preval):\t%lu", hivScreening.numPrevalentCases);
 	fprintf(statsFile, "\t\tHIV- Cases (Preval):\t%lu", hivScreening.numHIVNegativeAtInit);
 	fprintf(statsFile, "\n\tIncidence");
-	fprintf(statsFile, "\n\t\tTotal\tNever PrEP\tPrEP Dropout When Infected\tOn PrEP When Infected");
-	fprintf(statsFile, "\n\tHIV+ Cases (Incident):\t%lu\t%lu\t%lu\t%lu", hivScreening.numIncidentCases, hivScreening.numIncidentCasesByPrEPState[SimContext::HIV_POS_NEVER_PREP], hivScreening.numIncidentCasesByPrEPState[SimContext::HIV_POS_PREP_DROPOUT], hivScreening.numIncidentCasesByPrEPState[SimContext::HIV_POS_ON_PREP]);
+	fprintf(statsFile, "\n\t\tTotal\tNever PrEP\tPrEP Dropout When Infected\tPrEP Stopped Due to Age When Infected\tOn PrEP When Infected");
+	fprintf(statsFile, "\n\tHIV+ Cases (Incident):\t%d\t%d\t%d\t%d\t%d", 
+	hivScreening.numIncidentCases, 
+	hivScreening.numIncidentCasesByPrEPState[SimContext::HIV_POS_NEVER_PREP], 
+	hivScreening.numIncidentCasesByPrEPState[SimContext::HIV_POS_PREP_DROPOUT], 
+	hivScreening.numIncidentCasesByPrEPState[SimContext::HIV_POS_PREP_AGESTOP], 
+	hivScreening.numIncidentCasesByPrEPState[SimContext::HIV_POS_ON_PREP]);
 	fprintf(statsFile, "\n\t\tMean\tSD");
 	fprintf(statsFile, "\n\tMths to Inf (Incid):\t%1.2lf\t%1.2lf",
 		hivScreening.monthsToInfectionAverage, hivScreening.monthsToInfectionStdDev);
 	fprintf(statsFile, "\n\n\tTotal HIV+ Cases:\t%lu", hivScreening.numHIVPositiveTotal);
 	fprintf(statsFile,"\n\n\t# Ever on PrEP (all patients)\t%lu", hivScreening.numEverPrEP);
 	fprintf(statsFile,"\n\t# Drop out of PrEP (all patients)\t%lu", hivScreening.numDropoutPrEP);
+	fprintf(statsFile,"\n\t# Stop PrEP at Max Age (all patients)\t%lu", hivScreening.numStopPrEPMaxAge);
 	fprintf(statsFile,"\n\tOnly HIV- patients (never infected)");
 	fprintf(statsFile,"\n\t\tNum Patients\tAvg LMs \tAvg QALMs");
 	fprintf(statsFile,"\n\tEver on PrEP \t%lu \t%1.4lf \t%1.4lf ",
@@ -2587,7 +2610,7 @@ void RunStats::writeHIVScreening() {
 
 	fprintf(statsFile, "\n\t\tFalse Positive\tFalse Positive Linked");
 	fprintf(statsFile, "\n\tLife Months\t%1.0lf\t%1.0lf", hivScreening.LMsFalsePositive, hivScreening.LMsFalsePositiveLinked);
-
+	
 	fprintf(statsFile, "\n\t");
 	for (i = 0; i < SimContext::HIV_EXT_INF_NUM; ++i)
 		fprintf(statsFile, "\t%s", SimContext::HIV_EXT_INF_STRS[(i+1)%SimContext::HIV_EXT_INF_NUM ]);
@@ -2863,6 +2886,47 @@ void RunStats::writeHIVScreening() {
 		fprintf(statsFile, "\t%lu", hivScreening.numLinkLabStagingTrueCD4[j]);
 	}
 	fprintf(statsFile, "\t%lu", hivScreening.numLinkLabStaging);
+	fprintf(statsFile,"\n\t");
+	for (j = 0; j < SimContext::EID_TEST_TYPE_NUM; j++)
+		fprintf(statsFile, "\t%s", SimContext::EID_TEST_TYPE_STRS[j]);
+	fprintf(statsFile,"\t");
+	for(j = 0; j < SimContext::EID_NUM_TESTS; j++)
+		fprintf(statsFile, "\tHIV Test %d", j);
+
+	fprintf(statsFile, "\n\tTotal EID Tests");
+	for (j = 0; j < SimContext::EID_TEST_TYPE_NUM; j++)
+		fprintf(statsFile, "\t%1lu", hivScreening.numEIDTestsGivenType[j]);
+	fprintf(statsFile,"\t");
+	for (j = 0; j < SimContext::EID_NUM_TESTS; j++)
+		fprintf(statsFile, "\t%1lu", hivScreening.numEIDTestsGivenTest[j]);
+
+	fprintf(statsFile, "\n\tTotal True Pos EID Tests");
+	for (j = 0; j < SimContext::EID_TEST_TYPE_NUM; j++)
+		fprintf(statsFile, "\t%1lu", hivScreening.numTruePositiveEIDTestResultsType[j]);
+	fprintf(statsFile,"\t");
+	for (j = 0; j < SimContext::EID_NUM_TESTS; j++)
+		fprintf(statsFile, "\t%1lu", hivScreening.numTruePositiveEIDTestResultsTest[j]);
+
+	fprintf(statsFile, "\n\tTotal True Neg EID Tests");
+	for (j = 0; j < SimContext::EID_TEST_TYPE_NUM; j++)
+		fprintf(statsFile, "\t%1lu", hivScreening.numTrueNegativeEIDTestResultsType[j]);
+	fprintf(statsFile,"\t");
+	for (j = 0; j < SimContext::EID_NUM_TESTS; j++)
+		fprintf(statsFile, "\t%1lu", hivScreening.numTrueNegativeEIDTestResultsTest[j]);
+
+	fprintf(statsFile, "\n\tTotal False Pos EID Tests");
+	for (j = 0; j < SimContext::EID_TEST_TYPE_NUM; j++)
+		fprintf(statsFile, "\t%1lu", hivScreening.numFalsePositiveEIDTestResultsType[j]);
+	fprintf(statsFile,"\t");
+	for (j = 0; j < SimContext::EID_NUM_TESTS; j++)
+		fprintf(statsFile, "\t%1lu", hivScreening.numFalsePositiveEIDTestResultsTest[j]);
+
+	fprintf(statsFile, "\n\tTotal False Neg EID Tests");
+	for (j = 0; j < SimContext::EID_TEST_TYPE_NUM; j++)
+		fprintf(statsFile, "\t%1lu", hivScreening.numFalseNegativeEIDTestResultsType[j]);
+	fprintf(statsFile,"\t");
+	for (j = 0; j < SimContext::EID_NUM_TESTS; j++)
+		fprintf(statsFile, "\t%1lu", hivScreening.numFalseNegativeEIDTestResultsTest[j]);
 } /* end HIVScreening */
 
 /** \brief writeSurvivalStats outputs the SurvivalStats statistics to the stats file */
@@ -3586,9 +3650,13 @@ void RunStats::writeOverallCosts() {
 	fprintf(statsFile, "\n\tLab Staging Costs:\t%1.0lf\t%1.0lf",
 		overallCosts.costsLabStagingTests, overallCosts.costsLabStagingMisc);	
 
-	fprintf(statsFile, "\n\n\t\tNever HIV\tOn PrEP When Infected\tPrEP Dropout When Infected\tTotal");
-	fprintf(statsFile, "\n\tPrEP Costs:\t%1.0lf\t%1.0lf\t%1.0lf\t%1.0lf", overallCosts.costsPrEPNeverHIV,
-			overallCosts.costsPrEPHIVPos[SimContext::HIV_POS_ON_PREP], overallCosts.costsPrEPHIVPos[SimContext::HIV_POS_PREP_DROPOUT], overallCosts.costsPrEP);
+	fprintf(statsFile, "\n\n\t\tNever HIV\tOn PrEP When Infected\tPrEP Stopped Due to Age When Infected\tPrEP Dropout When Infected\tTotal");
+	fprintf(statsFile, "\n\tPrEP Costs:\t%1.0lf\t%1.0lf\t%1.0lf\t%1.0lf\t%1.0lf", 
+		overallCosts.costsPrEPNeverHIV,
+		overallCosts.costsPrEPHIVPos[SimContext::HIV_POS_ON_PREP], 
+		overallCosts.costsPrEPHIVPos[SimContext::HIV_POS_PREP_AGESTOP], 
+		overallCosts.costsPrEPHIVPos[SimContext::HIV_POS_PREP_DROPOUT], 
+		overallCosts.costsPrEP);
 	fprintf(statsFile, "\n\t\tStartup\tMonthly");
 	fprintf(statsFile, "\n\tIntervention Costs:\t%1.0lf\t%1.0lf",
 		overallCosts.costsInterventionStartup, overallCosts.costsInterventionMonthly);
@@ -4117,7 +4185,7 @@ void RunStats::writeARTStats() {
 			runSpecs->monthRecordARTEfficacy[0], runSpecs->monthRecordARTEfficacy[0],
 			runSpecs->monthRecordARTEfficacy[1], runSpecs->monthRecordARTEfficacy[1],
 			runSpecs->monthRecordARTEfficacy[2], runSpecs->monthRecordARTEfficacy[2]);
-		fprintf(statsFile, "\n\tNumber Patients: \t%1lu \t%1lu \t%1lu \t%1lu \t%1lu \t%1lu",
+		fprintf(statsFile, "\n\tNumber Patients: \t%1u \t%1u \t%1u \t%1u \t%1u \t%1u",
 			artStats.numOnARTAtMonth[j][0], artStats.numSuppressedAtMonth[j][0],
 			artStats.numOnARTAtMonth[j][1], artStats.numSuppressedAtMonth[j][1],
 			artStats.numOnARTAtMonth[j][2], artStats.numSuppressedAtMonth[j][2]);

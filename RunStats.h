@@ -455,8 +455,28 @@ public:
 		int numEverPrEP;
 		// Number of patients who drop out of PrEP
 		int numDropoutPrEP;
+		// Number of patients who stop PrEP due to screening age limit
+		int numStopPrEPMaxAge;
 
 		//EID
+		/** number of EID test results stratified by type of test*/
+		int numEIDTestsGivenType[SimContext::EID_TEST_TYPE_NUM];
+		int numTruePositiveEIDTestResultsType[SimContext::EID_TEST_TYPE_NUM];
+		int numTrueNegativeEIDTestResultsType[SimContext::EID_TEST_TYPE_NUM];
+		int numFalsePositiveEIDTestResultsType[SimContext::EID_TEST_TYPE_NUM];
+		int numFalseNegativeEIDTestResultsType[SimContext::EID_TEST_TYPE_NUM];
+
+		/** Total number of EID test results stratified by test num*/
+		int numEIDTestsGivenTest[SimContext::EID_NUM_TESTS];
+		/** Total number of true positive EID test results by test num */
+		int numTruePositiveEIDTestResultsTest[SimContext::EID_NUM_TESTS];
+		/** Total number of true negative EID test results by test num */
+		int numTrueNegativeEIDTestResultsTest[SimContext::EID_NUM_TESTS];
+		/** Total number of false positive EID test results by test num */
+		int numFalsePositiveEIDTestResultsTest[SimContext::EID_NUM_TESTS];
+		/** Total number of false negative EID test results by test num */
+		int numFalseNegativeEIDTestResultsTest[SimContext::EID_NUM_TESTS];
+
 		/** Number of months spent false positive*/
 		double LMsFalsePositive;
 		double LMsFalsePositiveLinked;
@@ -865,7 +885,7 @@ public:
 		/** Total PrEP costs for those never infected with HIV */
 		double costsPrEPNeverHIV;
 		/** Total PrEP costs for those who have had PrEP but get HIV by PrEP status*/
-		double costsPrEPHIVPos[2];
+		double costsPrEPHIVPos[SimContext::HIV_POS_PREP_STATES_NUM-1];
 		/** Total costs for HIV screening tests */
 		double costsHIVScreeningTests;
 		/** Total costs for HIV screening miscellaneous costs */
@@ -1334,9 +1354,9 @@ public:
 		// number on ART, number suppressed, and HVL drop at specified month time points,
 		//	stratified by ART line x month to record
 		/** Number on ART stratified by ART line and month to record */
-		int numOnARTAtMonth[SimContext::ART_NUM_LINES][SimContext::ART_NUM_MTHS_RECORD];
+		unsigned int numOnARTAtMonth[SimContext::ART_NUM_LINES][SimContext::ART_NUM_MTHS_RECORD];
 		/** Number suppressed on ART stratified by ART line and month to record */
-		int numSuppressedAtMonth[SimContext::ART_NUM_LINES][SimContext::ART_NUM_MTHS_RECORD];
+		unsigned int numSuppressedAtMonth[SimContext::ART_NUM_LINES][SimContext::ART_NUM_MTHS_RECORD];
 		/** Total number of HVL drops stratified by ART line and month to record */
 		double HVLDropsAtMonthSum[SimContext::ART_NUM_LINES][SimContext::ART_NUM_MTHS_RECORD];
 		/** Average number of HVL drops stratified by ART line and month to record */

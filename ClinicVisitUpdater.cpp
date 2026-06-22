@@ -619,6 +619,10 @@ void ClinicVisitUpdater::performARTProgramUpdates() {
 	if (startNextART) {
 		//Check to see if we should guarantee initial suppression (They are on a resuppression regimen and they where obsv to fail but not true fail previous regimen
 		bool guaranteeSuppression = false;
+		bool isNewARTLine = false;
+		if(!patient->getARTState()->hasTakenARTRegimen[patient->getARTState()->nextRegimenNum]){
+			isNewARTLine = true;
+		}
 		if (patient->getPedsState()->ageCategoryPediatrics == SimContext::PEDS_AGE_ADULT){
 			if (patient->getARTState()->hasTakenART)
 				if (patient->getARTState()->hasObservedFailure && patient->getARTState()->currRegimenEfficacy == SimContext::ART_EFF_SUCCESS)
@@ -720,7 +724,7 @@ void ClinicVisitUpdater::performARTProgramUpdates() {
 
 		if (patient->getGeneralState()->isOnAdherenceIntervention)
 			responseLogit += patient->getGeneralState()->responseLogitAdherenceInterventionIncrement;
-		setCurrARTResponse(responseLogit);
+		setCurrARTResponse(responseLogit, isNewARTLine);
 
 		/** Determine and set the initial efficacy of the regimen
 		// Determine the probability of suppression */
@@ -795,7 +799,7 @@ void ClinicVisitUpdater::performARTProgramUpdates() {
 		/** Set the initial CD4 slope for suppressive ART based on the response type,
 		//	also set the CD4 envelope regimen and slope if this is the first successful regimen and the envelope is enabled; this controls the CD4 gain on successive ART regimens*/
 		// the overall CD4 envelope holds across all regimens, so once active the patient always has an active overall envelope
-		//  The individual regimen envelope is regimen-specific, so a patient could have an active individual envelope on one regimen and then when they start a new regimen, it is reset to inactive until they are successful on it
+		//  The individual regimen envelope is regimen-specific, so a patient could have an active individual envelope on one regimen and then when they start a new regimen, it is reset to inactive until they are successful on it. It should also be inactivated while LTFU.
 		if (efficacy == SimContext::ART_EFF_SUCCESS) {
 			SimContext::CD4_RESPONSE_TYPE cd4Response = patient->getARTState()->CD4ResponseType;
 			//Adolescent starting successful regimen

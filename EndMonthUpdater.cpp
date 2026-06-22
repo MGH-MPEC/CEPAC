@@ -73,7 +73,7 @@ void EndMonthUpdater::performMonthlyUpdates() {
 		}	
 		// For those who have ever had PrEP and died this month, accumulate their final PrEP costs by PrEP state
 		if(!patient->isAlive())
-			finalizePrEPCostsByState(patient->getMonitoringState()->isPrEPDropout);
+			finalizePrEPCostsByState();
     }
 
 	/** Increment costs for ART treatments */
